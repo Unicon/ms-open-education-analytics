@@ -6,10 +6,7 @@
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
-			"resource": {
-				"type": "string"
-			},
-			"bearerToken": {
+			"relativeUrl": {
 				"type": "string"
 			}
 		},
@@ -17,7 +14,7 @@
 		"type": "RestResource",
 		"typeProperties": {
 			"relativeUrl": {
-				"value": "@dataset().resource",
+				"value": "@dataset().relativeUrl",
 				"type": "Expression"
 			}
 		},

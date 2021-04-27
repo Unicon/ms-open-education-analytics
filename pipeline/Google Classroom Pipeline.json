@@ -38,7 +38,7 @@
 				"typeProperties": {
 					"variableName": "GoogleClassroomApiAccessToken",
 					"value": {
-						"value": "@activity('Get Google Classroom Token').output.token",
+						"value": "@concat('Bearer ',  activity('Get Google Classroom Token').output.token)",
 						"type": "Expression"
 					}
 				}
@@ -81,7 +81,7 @@
 					},
 					"activities": [
 						{
-							"name": "Copy data from API endpoint",
+							"name": "Copy Resource Data",
 							"type": "Copy",
 							"dependsOn": [],
 							"policy": {
@@ -97,7 +97,13 @@
 									"type": "RestSource",
 									"httpRequestTimeout": "00:01:40",
 									"requestInterval": "00.00:00:00.010",
-									"requestMethod": "GET"
+									"requestMethod": "GET",
+									"additionalHeaders": {
+										"Authorization": {
+											"value": "@variables('GoogleClassroomApiAccessToken')",
+											"type": "Expression"
+										}
+									}
 								},
 								"sink": {
 									"type": "JsonSink",
@@ -115,14 +121,7 @@
 									"referenceName": "GoogleClassroomRestResource",
 									"type": "DatasetReference",
 									"parameters": {
-										"resource": {
-											"value": "@item()",
-											"type": "Expression"
-										},
-										"bearerToken": {
-											"value": "\"Bearer \" + @variables('GoogleClassroomApiAccessToken')",
-											"type": "Expression"
-										}
+										"relativeUrl": "@item()"
 									}
 								}
 							],
@@ -143,6 +142,9 @@
 			},
 			"GoogleClassroomResources": {
 				"type": "Array"
+			},
+			"temp": {
+				"type": "String"
 			}
 		},
 		"annotations": []
