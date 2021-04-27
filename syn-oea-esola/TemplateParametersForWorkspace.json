@@ -1,0 +1,51 @@
+{
+	"$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"value": "syn-oea-esola"
+		},
+		"DataLake_accountKey": {
+			"value": ""
+		},
+		"EdFiSqlServer_connectionString": {
+			"value": ""
+		},
+		"OnPremiseFileServer_password": {
+			"value": ""
+		},
+		"SqlServer1_connectionString": {
+			"value": ""
+		},
+		"SqlServer1_password": {
+			"value": ""
+		},
+		"syn-oea-esola-WorkspaceDefaultSqlServer_connectionString": {
+			"value": ""
+		},
+		"AzureKeyVault_properties_typeProperties_baseUrl": {
+			"value": "https://oladevkeyvault.vault.azure.net/"
+		},
+		"DataLake_properties_typeProperties_url": {
+			"value": "https://stoeaesola.dfs.core.windows.net"
+		},
+		"GoogleClarroomRestServiceV1_properties_typeProperties_url": {
+			"value": "https://classroom.googleapis.com/v1/"
+		},
+		"GoogleClassroomOAuthAzureFunction_properties_typeProperties_functionAppUrl": {
+			"value": "https://olaoauth2.azurewebsites.net"
+		},
+		"OnPremiseFileServer_properties_typeProperties_host": {
+			"value": "c:\\temp\\oneroster"
+		},
+		"OnPremiseFileServer_properties_typeProperties_userId": {
+			"value": "estock51@hotmail.com"
+		},
+		"SqlServer1_properties_typeProperties_userName": {
+			"value": "estock51@hotmail.com"
+		},
+		"syn-oea-esola-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"value": "https://stoeaesola.dfs.core.windows.net"
+		}
+	}
+}

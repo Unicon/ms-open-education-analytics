@@ -1,0 +1,1831 @@
+{
+	"$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+	"contentVersion": "1.0.0.0",
+	"parameters": {
+		"workspaceName": {
+			"type": "string",
+			"metadata": "Workspace name",
+			"defaultValue": "syn-oea-esola"
+		},
+		"DataLake_accountKey": {
+			"type": "secureString",
+			"metadata": "Secure string for 'accountKey' of 'DataLake'"
+		},
+		"EdFiSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'EdFiSqlServer'"
+		},
+		"OnPremiseFileServer_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'OnPremiseFileServer'"
+		},
+		"SqlServer1_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'SqlServer1'"
+		},
+		"SqlServer1_password": {
+			"type": "secureString",
+			"metadata": "Secure string for 'password' of 'SqlServer1'"
+		},
+		"syn-oea-esola-WorkspaceDefaultSqlServer_connectionString": {
+			"type": "secureString",
+			"metadata": "Secure string for 'connectionString' of 'syn-oea-esola-WorkspaceDefaultSqlServer'"
+		},
+		"AzureKeyVault_properties_typeProperties_baseUrl": {
+			"type": "string",
+			"defaultValue": "https://oladevkeyvault.vault.azure.net/"
+		},
+		"DataLake_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stoeaesola.dfs.core.windows.net"
+		},
+		"GoogleClarroomRestServiceV1_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://classroom.googleapis.com/v1/"
+		},
+		"GoogleClassroomOAuthAzureFunction_properties_typeProperties_functionAppUrl": {
+			"type": "string",
+			"defaultValue": "https://olaoauth2.azurewebsites.net"
+		},
+		"OnPremiseFileServer_properties_typeProperties_host": {
+			"type": "string",
+			"defaultValue": "c:\\temp\\oneroster"
+		},
+		"OnPremiseFileServer_properties_typeProperties_userId": {
+			"type": "string",
+			"defaultValue": "estock51@hotmail.com"
+		},
+		"SqlServer1_properties_typeProperties_userName": {
+			"type": "string",
+			"defaultValue": "estock51@hotmail.com"
+		},
+		"syn-oea-esola-WorkspaceDefaultStorage_properties_typeProperties_url": {
+			"type": "string",
+			"defaultValue": "https://stoeaesola.dfs.core.windows.net"
+		}
+	},
+	"variables": {
+		"workspaceId": "[concat('Microsoft.Synapse/workspaces/', parameters('workspaceName'))]"
+	},
+	"resources": [
+		{
+			"name": "[concat(parameters('workspaceName'), '/Ed-Fi Pipeline')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "LookupTableNames",
+						"type": "Lookup",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "SELECT t.name\nFROM sys.tables t\nJOIN sys.schemas s on s.schema_id = t.schema_id\nWHERE s.name = 'edfi'\nORDER BY t.Name",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"dataset": {
+								"referenceName": "OnPremEdFiSqlServerTableLookup",
+								"type": "DatasetReference",
+								"parameters": {}
+							},
+							"firstRowOnly": false
+						}
+					},
+					{
+						"name": "ForEachTableName",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "LookupTableNames",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('LookupTableNames').output.value",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy_OnPrem_EdFi_SQLServer_Copy_Table",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "SqlServerSource",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
+										},
+										"sink": {
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "EdFiSqlServer_Course",
+											"type": "DatasetReference",
+											"parameters": {
+												"tableName": "@item().Name"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "EdFiParquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"folder": "@item().Name"
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "Copy_OnPrem_EdFi_SQLServer_Copy_SysTables",
+						"type": "Copy",
+						"dependsOn": [
+							{
+								"activity": "LookupTableNames",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"source": {
+								"type": "SqlServerSource",
+								"sqlReaderQuery": "SELECT t.name\nFROM sys.tables t\nJOIN sys.schemas s on s.schema_id = t.schema_id\nWHERE s.name = 'edfi'\nORDER BY t.name",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
+							"sink": {
+								"type": "ParquetSink",
+								"storeSettings": {
+									"type": "AzureBlobFSWriteSettings"
+								},
+								"formatSettings": {
+									"type": "ParquetWriteSettings"
+								}
+							},
+							"enableStaging": false,
+							"translator": {
+								"type": "TabularTranslator",
+								"mappings": [
+									{
+										"source": {
+											"name": "name",
+											"type": "String",
+											"physicalType": "nvarchar"
+										},
+										"sink": {
+											"name": "name",
+											"type": "String",
+											"physicalType": "UTF8"
+										}
+									}
+								],
+								"typeConversion": true,
+								"typeConversionSettings": {
+									"allowDataTruncation": true,
+									"treatBooleanAsNumber": false
+								}
+							}
+						},
+						"inputs": [
+							{
+								"referenceName": "SqlServerSysTable",
+								"type": "DatasetReference",
+								"parameters": {}
+							}
+						],
+						"outputs": [
+							{
+								"referenceName": "EdFiParquet",
+								"type": "DatasetReference",
+								"parameters": {
+									"folder": "sys.tables"
+								}
+							}
+						]
+					}
+				],
+				"annotations": [],
+				"lastPublishTime": "2021-04-26T23:12:13Z"
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/datasets/OnPremEdFiSqlServerTableLookup')]",
+				"[concat(variables('workspaceId'), '/datasets/SqlServerSysTable')]",
+				"[concat(variables('workspaceId'), '/datasets/EdFiParquet')]",
+				"[concat(variables('workspaceId'), '/datasets/EdFiSqlServer_Course')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/Google Classroom Pipeline')]",
+			"type": "Microsoft.Synapse/workspaces/pipelines",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"activities": [
+					{
+						"name": "Get Google Classroom Token",
+						"type": "AzureFunctionActivity",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "7.00:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"functionName": "GetOAuth2Token",
+							"method": "GET",
+							"headers": {}
+						},
+						"linkedServiceName": {
+							"referenceName": "GoogleClassroomOAuthAzureFunction",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "Set Google Classroom Access Token Variable",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get Google Classroom Token",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "GoogleClassroomApiAccessToken",
+							"value": {
+								"value": "@concat('Bearer ',  activity('Get Google Classroom Token').output.token)",
+								"type": "Expression"
+							}
+						}
+					},
+					{
+						"name": "Set Google Classroom Resources",
+						"type": "SetVariable",
+						"dependsOn": [
+							{
+								"activity": "Get Google Classroom Token",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "GoogleClassroomResources",
+							"value": [
+								"courses"
+							]
+						}
+					},
+					{
+						"name": "ForEachResource",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "Set Google Classroom Resources",
+								"dependencyConditions": [
+									"Completed"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@variables('GoogleClassroomResources')",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "Copy Resource Data",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "7.00:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "RestSource",
+											"httpRequestTimeout": "00:01:40",
+											"requestInterval": "00.00:00:00.010",
+											"requestMethod": "GET",
+											"additionalHeaders": {
+												"Authorization": {
+													"value": "@variables('GoogleClassroomApiAccessToken')",
+													"type": "Expression"
+												}
+											}
+										},
+										"sink": {
+											"type": "JsonSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "JsonWriteSettings"
+											}
+										},
+										"enableStaging": false
+									},
+									"inputs": [
+										{
+											"referenceName": "GoogleClassroomRestResource",
+											"type": "DatasetReference",
+											"parameters": {
+												"relativeUrl": "@item()"
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "GoogleClassroomJson",
+											"type": "DatasetReference",
+											"parameters": {}
+										}
+									]
+								}
+							]
+						}
+					}
+				],
+				"variables": {
+					"GoogleClassroomApiAccessToken": {
+						"type": "String"
+					},
+					"GoogleClassroomResources": {
+						"type": "Array"
+					},
+					"temp": {
+						"type": "String"
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/GoogleClassroomOAuthAzureFunction')]",
+				"[concat(variables('workspaceId'), '/datasets/GoogleClassroomRestResource')]",
+				"[concat(variables('workspaceId'), '/datasets/GoogleClassroomJson')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/EdFiParquet')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "DataLake",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"folder": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Parquet",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"folderPath": {
+							"value": "@dataset().folder",
+							"type": "Expression"
+						},
+						"fileSystem": "stage1/ed-fi"
+					},
+					"compressionCodec": "snappy"
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/DataLake')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/EdFiSqlServer_Course')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "EdFiSqlServer",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"tableName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [],
+				"typeProperties": {
+					"schema": "edfi",
+					"table": {
+						"value": "@dataset().tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/EdFiSqlServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/GoogleClassroomJson')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "DataLake",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobFSLocation",
+						"fileName": "test.json",
+						"folderPath": "googleclassroom",
+						"fileSystem": "stage1"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/DataLake')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/GoogleClassroomRestResource')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "GoogleClarroomRestServiceV1",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"relativeUrl": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "RestResource",
+				"typeProperties": {
+					"relativeUrl": {
+						"value": "@dataset().relativeUrl",
+						"type": "Expression"
+					}
+				},
+				"schema": []
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/GoogleClarroomRestServiceV1')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/OnPremEdFiSqlServerTableLookup')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "EdFiSqlServer",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "object_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "principal_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "schema_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "parent_object_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "type",
+						"type": "char"
+					},
+					{
+						"name": "type_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "create_date",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "modify_date",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "is_ms_shipped",
+						"type": "bit"
+					},
+					{
+						"name": "is_published",
+						"type": "bit"
+					},
+					{
+						"name": "is_schema_published",
+						"type": "bit"
+					},
+					{
+						"name": "lob_data_space_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "filestream_data_space_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "max_column_id_used",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "lock_on_bulk_load",
+						"type": "bit"
+					},
+					{
+						"name": "uses_ansi_nulls",
+						"type": "bit"
+					},
+					{
+						"name": "is_replicated",
+						"type": "bit"
+					},
+					{
+						"name": "has_replication_filter",
+						"type": "bit"
+					},
+					{
+						"name": "is_merge_published",
+						"type": "bit"
+					},
+					{
+						"name": "is_sync_tran_subscribed",
+						"type": "bit"
+					},
+					{
+						"name": "has_unchecked_assembly_data",
+						"type": "bit"
+					},
+					{
+						"name": "text_in_row_limit",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "large_value_types_out_of_row",
+						"type": "bit"
+					},
+					{
+						"name": "is_tracked_by_cdc",
+						"type": "bit"
+					},
+					{
+						"name": "lock_escalation",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "lock_escalation_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "is_filetable",
+						"type": "bit"
+					},
+					{
+						"name": "is_memory_optimized",
+						"type": "bit"
+					},
+					{
+						"name": "durability",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "durability_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "temporal_type",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "temporal_type_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "history_table_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "is_remote_data_archive_enabled",
+						"type": "bit"
+					},
+					{
+						"name": "is_external",
+						"type": "bit"
+					},
+					{
+						"name": "history_retention_period",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "history_retention_period_unit",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "history_retention_period_unit_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "is_node",
+						"type": "bit"
+					},
+					{
+						"name": "is_edge",
+						"type": "bit"
+					}
+				],
+				"typeProperties": {
+					"schema": "sys",
+					"table": "tables"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/EdFiSqlServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SqlServerSysTable')]",
+			"type": "Microsoft.Synapse/workspaces/datasets",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "EdFiSqlServer",
+					"type": "LinkedServiceReference"
+				},
+				"annotations": [],
+				"type": "SqlServerTable",
+				"schema": [
+					{
+						"name": "name",
+						"type": "nvarchar"
+					},
+					{
+						"name": "object_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "principal_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "schema_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "parent_object_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "type",
+						"type": "char"
+					},
+					{
+						"name": "type_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "create_date",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "modify_date",
+						"type": "datetime",
+						"precision": 23,
+						"scale": 3
+					},
+					{
+						"name": "is_ms_shipped",
+						"type": "bit"
+					},
+					{
+						"name": "is_published",
+						"type": "bit"
+					},
+					{
+						"name": "is_schema_published",
+						"type": "bit"
+					},
+					{
+						"name": "lob_data_space_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "filestream_data_space_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "max_column_id_used",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "lock_on_bulk_load",
+						"type": "bit"
+					},
+					{
+						"name": "uses_ansi_nulls",
+						"type": "bit"
+					},
+					{
+						"name": "is_replicated",
+						"type": "bit"
+					},
+					{
+						"name": "has_replication_filter",
+						"type": "bit"
+					},
+					{
+						"name": "is_merge_published",
+						"type": "bit"
+					},
+					{
+						"name": "is_sync_tran_subscribed",
+						"type": "bit"
+					},
+					{
+						"name": "has_unchecked_assembly_data",
+						"type": "bit"
+					},
+					{
+						"name": "text_in_row_limit",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "large_value_types_out_of_row",
+						"type": "bit"
+					},
+					{
+						"name": "is_tracked_by_cdc",
+						"type": "bit"
+					},
+					{
+						"name": "lock_escalation",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "lock_escalation_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "is_filetable",
+						"type": "bit"
+					},
+					{
+						"name": "is_memory_optimized",
+						"type": "bit"
+					},
+					{
+						"name": "durability",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "durability_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "temporal_type",
+						"type": "tinyint",
+						"precision": 3
+					},
+					{
+						"name": "temporal_type_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "history_table_id",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "is_remote_data_archive_enabled",
+						"type": "bit"
+					},
+					{
+						"name": "is_external",
+						"type": "bit"
+					},
+					{
+						"name": "history_retention_period",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "history_retention_period_unit",
+						"type": "int",
+						"precision": 10
+					},
+					{
+						"name": "history_retention_period_unit_desc",
+						"type": "nvarchar"
+					},
+					{
+						"name": "is_node",
+						"type": "bit"
+					},
+					{
+						"name": "is_edge",
+						"type": "bit"
+					}
+				],
+				"typeProperties": {}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/linkedServices/EdFiSqlServer')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AzureKeyVault')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureKeyVault",
+				"typeProperties": {
+					"baseUrl": "[parameters('AzureKeyVault_properties_typeProperties_baseUrl')]"
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/DataLake')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('DataLake_properties_typeProperties_url')]",
+					"accountKey": {
+						"type": "SecureString",
+						"value": "[parameters('DataLake_accountKey')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/EdFiSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('EdFiSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "LocalIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/LocalIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/GoogleClarroomRestServiceV1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "RestService",
+				"typeProperties": {
+					"url": "[parameters('GoogleClarroomRestServiceV1_properties_typeProperties_url')]",
+					"enableServerCertificateValidation": true,
+					"authenticationType": "Anonymous"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/GoogleClassroomOAuthAzureFunction')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureFunction",
+				"typeProperties": {
+					"functionAppUrl": "[parameters('GoogleClassroomOAuthAzureFunction_properties_typeProperties_functionAppUrl')]",
+					"functionKey": {
+						"type": "AzureKeyVaultSecret",
+						"store": {
+							"referenceName": "AzureKeyVault",
+							"type": "LinkedServiceReference"
+						},
+						"secretName": "olaoauth2functionkey"
+					}
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]",
+				"[concat(variables('workspaceId'), '/linkedServices/AzureKeyVault')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/OnPremiseFileServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "FileServer",
+				"typeProperties": {
+					"host": "[parameters('OnPremiseFileServer_properties_typeProperties_host')]",
+					"userId": "[parameters('OnPremiseFileServer_properties_typeProperties_userId')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('OnPremiseFileServer_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "LocalIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/LocalIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/SqlServer1')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "SqlServer",
+				"typeProperties": {
+					"connectionString": "[parameters('SqlServer1_connectionString')]",
+					"userName": "[parameters('SqlServer1_properties_typeProperties_userName')]",
+					"password": {
+						"type": "SecureString",
+						"value": "[parameters('SqlServer1_password')]"
+					}
+				},
+				"connectVia": {
+					"referenceName": "LocalIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/LocalIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/syn-oea-esola-WorkspaceDefaultSqlServer')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"parameters": {
+					"DBName": {
+						"type": "String"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlDW",
+				"typeProperties": {
+					"connectionString": "[parameters('syn-oea-esola-WorkspaceDefaultSqlServer_connectionString')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/syn-oea-esola-WorkspaceDefaultStorage')]",
+			"type": "Microsoft.Synapse/workspaces/linkedServices",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"annotations": [],
+				"type": "AzureBlobFS",
+				"typeProperties": {
+					"url": "[parameters('syn-oea-esola-WorkspaceDefaultStorage_properties_typeProperties_url')]"
+				},
+				"connectVia": {
+					"referenceName": "AutoResolveIntegrationRuntime",
+					"type": "IntegrationRuntimeReference"
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('workspaceId'), '/integrationRuntimes/AutoResolveIntegrationRuntime')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/AutoResolveIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "Managed",
+				"typeProperties": {
+					"computeProperties": {
+						"location": "AutoResolve",
+						"dataFlowProperties": {
+							"computeType": "General",
+							"coreCount": 8,
+							"timeToLive": 0
+						}
+					}
+				}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/LocalIntegrationRuntime')]",
+			"type": "Microsoft.Synapse/workspaces/integrationRuntimes",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "SelfHosted",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/WorkspaceSystemIdentity')]",
+			"type": "Microsoft.Synapse/workspaces/credentials",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"type": "ManagedIdentity",
+				"typeProperties": {}
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/EdFi_create_serverless_sql')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 0,
+				"nbformat_minor": 0,
+				"bigDataPool": {
+					"referenceName": "spark1",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"synapse_widget": {
+						"version": "0.1",
+						"state": {
+							"5c7d060d-cb3c-4ff0-af10-9d4944f17353": {
+								"type": "Synapse.DataFrame",
+								"sync_state": {
+									"table": {
+										"rows": [
+											{
+												"name": "AbsenceEventCategoryDescriptor"
+											},
+											{
+												"name": "AcademicHonorCategoryDescriptor"
+											},
+											{
+												"name": "AcademicSubjectDescriptor"
+											},
+											{
+												"name": "AcademicWeek"
+											},
+											{
+												"name": "AccommodationDescriptor"
+											},
+											{
+												"name": "Account"
+											},
+											{
+												"name": "AccountabilityRating"
+											},
+											{
+												"name": "AccountAccountCode"
+											},
+											{
+												"name": "AccountClassificationDescriptor"
+											},
+											{
+												"name": "AccountCode"
+											}
+										],
+										"schema": {
+											"name": "string"
+										}
+									},
+									"isSummary": false,
+									"language": "scala"
+								},
+								"persist_state": {
+									"view": {
+										"type": "details",
+										"chartOptions": {
+											"chartType": "bar",
+											"aggregationType": "count",
+											"categoryFieldKeys": [
+												"name"
+											],
+											"seriesFieldKeys": [
+												"name"
+											],
+											"isStacked": false
+										}
+									}
+								}
+							}
+						}
+					},
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/88bc4ad2-b92a-4cec-9c63-bac0d9696a30/resourceGroups/rg-oea-esola/providers/Microsoft.Synapse/workspaces/syn-oea-esola/bigDataPools/spark1",
+						"name": "spark1",
+						"type": "Spark",
+						"endpoint": "https://syn-oea-esola.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark1",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "2.4",
+						"nodeCount": 3,
+						"cores": 4,
+						"memory": 28,
+						"extraHeader": null
+					}
+				},
+				"cells": [
+					{
+						"cell_type": "code",
+						"metadata": {
+							"outputCollapsed": true,
+							"microsoft": {
+								"language": "python"
+							},
+							"diagram": {
+								"activateDiagramType": 1,
+								"chartConfig": {
+									"category": "bar",
+									"keys": [
+										"AssessmentIdentifier"
+									],
+									"values": [
+										"AssessmentCategoryDescriptorId"
+									],
+									"yLabel": "AssessmentCategoryDescriptorId",
+									"xLabel": "AssessmentIdentifier",
+									"aggregation": "SUM",
+									"aggByBackend": false
+								},
+								"aggData": "{\"AssessmentCategoryDescriptorId\":{\"01774fa3-06f1-47fe-8801-c8b1e65057f2\":134,\"19bcfe00-9c75-4d4f-ac2c-706e7479070f\":134,\"1a6a5d20-4758-4f45-848d-59f3f03ae425\":134,\"39576404-04d2-4c06-a0e7-e2cb27968d01\":134,\"3e0e2cac-847b-4ddd-93ec-925826552447\":134,\"97e16cba-5fb0-438b-be0e-7f7fb6b591dc\":134,\"ACT Composite\":112,\"ACT English\":112,\"ACT Reading\":112,\"ACT Science\":112}}",
+								"isSummary": false,
+								"previewData": {
+									"filter": null
+								},
+								"isSql": false
+							},
+							"collapsed": false
+						},
+						"source": [
+							"%%pyspark\r\n",
+							"df = spark.read.load('abfss://stage1@stoeaesola.dfs.core.windows.net/ed-fi/sys.tables', format='parquet')\r\n",
+							"display(df.limit(10))"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 35
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"storage_account = 'stoeaesola'\n",
+							"use_test_env = False"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 38
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"if use_test_env:\n",
+							"    stage1 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage1'\n",
+							"    stage2 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage2'\n",
+							"    stage3 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage3'\n",
+							"else:\n",
+							"    stage1 = 'abfss://stage1@' + storage_account + '.dfs.core.windows.net'\n",
+							"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\n",
+							"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 39
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# Create spark db to allow for access to the data in the delta-lake via SQL on-demand.\n",
+							"# This is only creating metadata for SQL on-demand, pointing to the data in the delta-lake.\n",
+							"# This also makes it possible to connect in Power BI via the azure sql data source connector.\n",
+							"def create_spark_db(db_name, source_path, tables):\n",
+							"    spark.sql('CREATE DATABASE IF NOT EXISTS ' + db_name)\n",
+							"    for table in tables:\n",
+							"        copyDf = spark.read.format('parquet').load(stage1 + '/ed-fi/' + table.name)\n",
+							"        copyDf.write.format('parquet').mode('overwrite').save(source_path + \"/\" + table.name)\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".\" + table.name + \" using PARQUET location '\" + source_path + \"/\" + table.name + \"'\")\n",
+							"\n",
+							"df = spark.read.format('parquet').load(stage1 + '/ed-fi/sys.tables')\n",
+							"tables = df.rdd.collect()\n",
+							"create_spark_db('s2_edfi', stage2 + '/ed-fi', tables)"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 44
+					}
+				]
+			},
+			"dependsOn": []
+		},
+		{
+			"name": "[concat(parameters('workspaceName'), '/M365_setup_and_update')]",
+			"type": "Microsoft.Synapse/workspaces/notebooks",
+			"apiVersion": "2019-06-01-preview",
+			"properties": {
+				"nbformat": 0,
+				"nbformat_minor": 0,
+				"bigDataPool": {
+					"referenceName": "spark1",
+					"type": "BigDataPoolReference"
+				},
+				"sessionProperties": {
+					"driverMemory": "28g",
+					"driverCores": 4,
+					"executorMemory": "28g",
+					"executorCores": 4,
+					"numExecutors": 2,
+					"conf": {
+						"spark.dynamicAllocation.enabled": "false",
+						"spark.dynamicAllocation.minExecutors": "2",
+						"spark.dynamicAllocation.maxExecutors": "2"
+					}
+				},
+				"metadata": {
+					"saveOutput": true,
+					"synapse_widget": {
+						"version": "0.1"
+					},
+					"kernelspec": {
+						"name": "synapse_pyspark",
+						"display_name": "Synapse PySpark"
+					},
+					"language_info": {
+						"name": "python"
+					},
+					"a365ComputeOptions": {
+						"id": "/subscriptions/88bc4ad2-b92a-4cec-9c63-bac0d9696a30/resourceGroups/rg-oea-esola/providers/Microsoft.Synapse/workspaces/syn-oea-esola/bigDataPools/spark1",
+						"name": "spark1",
+						"type": "Spark",
+						"endpoint": "https://syn-oea-esola.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark1",
+						"auth": {
+							"type": "AAD",
+							"authResource": "https://dev.azuresynapse.net"
+						},
+						"sparkVersion": "2.4",
+						"nodeCount": 3,
+						"cores": 4,
+						"memory": 28,
+						"extraHeader": null
+					}
+				},
+				"cells": [
+					{
+						"cell_type": "markdown",
+						"source": [
+							"## M365 module setup\n",
+							"\n",
+							"\n",
+							"\n",
+							"\n",
+							""
+						],
+						"attachments": null
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"tags": [
+								"parameters"
+							]
+						},
+						"source": [
+							"storage_account = 'stoeaesola'\n",
+							"use_test_env = False\n",
+							"has_calendar_records = False\n",
+							"has_course_records = False\n",
+							"has_org_records = False\n",
+							"has_person_records = False\n",
+							"has_person_identifier_records = False\n",
+							"has_ref_definition_records = False\n",
+							"has_section_records = False\n",
+							"has_session_records = False\n",
+							"has_staff_org_affiliation_records = False\n",
+							"has_student_org_affiliation_records = False\n",
+							"has_staff_section_membership_records = False\n",
+							"has_student_section_membership_records = False"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 224
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"if use_test_env:\n",
+							"    stage1 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage1'\n",
+							"    stage2 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage2'\n",
+							"    stage3 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage3'\n",
+							"else:\n",
+							"    stage1 = 'abfss://stage1@' + storage_account + '.dfs.core.windows.net'\n",
+							"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\n",
+							"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 225
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"stage1_m365 = stage1 + '/m365/DIPData'\n",
+							"stage1_m365_activity = stage1 + '/m365/DIPData/Activity/ApplicationUsage'\n",
+							"\n",
+							"# Process Roster data from stage 1 to stage 2 (adds schema info and writes out in parquet format)\n",
+							"\n",
+							"# Calendar\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/Calendar.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_calendar_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'Calendar')\n",
+							"  df = spark.sql(\"select _c0 Id, _c1 Name, _c2 Description, cast(_c3 as int) SchoolYear, cast(_c4 as boolean) IsCurrent, _c5 ExternalId, to_timestamp(_c6, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c7, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c8 as boolean) IsActive, _c9 OrgId from Calendar\")\n",
+							"  df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + '/m365/Calendar')\n",
+							"# Course\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/Course.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_course_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'Course')\n",
+							"  df = spark.sql(\"select _c0 Id, _c1 Name, _c2 Code, _c3 Description, _c4 ExternalId, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c6, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c7 as boolean) IsActive, _c8 CalendarId from Course\")\n",
+							"  df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + '/m365/Course')\n",
+							"# Person\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/Person.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_person_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'Person')\n",
+							"  df_Person = spark.sql(\"select _c0 Id, _c1 FirstName, _c2 MiddleName, _c3 LastName, _c4 GenerationCode, _c5 Prefix, _c6 EnabledUser, _c7 ExternalId, to_timestamp(_c8, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c9, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c10 as boolean) IsActive, _c11 SourceSystemId from Person\")\n",
+							"  df_Person.write.format('parquet').mode('overwrite').save(stage2 + '/m365/Person')\n",
+							"# PersonIdentifier\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/PersonIdentifier.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_person_identifier_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'PersonIdentifier')\n",
+							"  df = spark.sql(\"select _c0 Id, _c1 Identifier, _c2 Description, _c3 RefIdentifierTypeId, _c4 ExternalId, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c6, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c7 as boolean) IsActive, _c8 PersonId, _c9 SourceSystemId from PersonIdentifier\")\n",
+							"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/PersonIdentifier')\n",
+							"# RefDefinition\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/RefDefinition.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_ref_definition_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'RefDefinition')\n",
+							"  df = spark.sql(\"select _c0 Id, _c1 RefType, _c2 Namespace, _c3 Code, cast(_c4 as int) SortOrder, _c5 Description, cast(_c6 as boolean) IsActive from RefDefinition\")\n",
+							"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/RefDefinition')\n",
+							"# Section\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/Section.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_section_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'Section')\n",
+							"  df = spark.sql(\"select _c0 Id, _c1 Name, _c2 Code, _c3 Location, _c4 ExternalId, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c6, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c7 as boolean) IsActive, _c8 CourseId, _c9 RefSectionTypeId, _c10 SessionId, _c11 OrgId from Section\")\n",
+							"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/Section')\n",
+							"# Session\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/Session.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_session_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'Session')\n",
+							"  df = spark.sql(\"select _c0 Id, _c1 Name, to_timestamp(_c2, 'MM/dd/yyyy hh:mm:ss a') BeginDate, to_timestamp(_c3, 'MM/dd/yyyy hh:mm:ss a') EndDate, _c4 ExternalId, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c6, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c7 as boolean) IsActive, _c8 CalendarId, _c9 ParentSessionId, _c10 RefSessionTypeId from Session\")\n",
+							"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/Session')\n",
+							"# StaffOrgAffiliation\n",
+							"dfstaffoa = spark.read.csv(stage1_m365 + '/Roster/StaffOrgAffiliation.csv', header='false')\n",
+							"if (dfstaffoa.count() > 0):\n",
+							"  has_staff_org_affiliation_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(dfstaffoa, 'StaffOrgAffiliation')\n",
+							"  dfstaffoa = spark.sql(\"select _c0 Id, cast(_c1 as boolean) IsPrimary, to_timestamp(_c2, 'MM/dd/yyyy hh:mm:ss a') EntryDate, to_timestamp(_c3, 'MM/dd/yyyy hh:mm:ss a') ExitDate, _c4 ExternalId, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c6, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c7 as boolean) IsActive, _c8 OrgId, _c9 PersonId, _c10 RefStaffOrgRoleId from StaffOrgAffiliation\")\n",
+							"  dfstaffoa.write.format('parquet').mode('overwrite').save(stage2 + '/m365/StaffOrgAffiliation')\n",
+							"# StaffSectionMembership\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/StaffSectionMembership.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_staff_section_membership_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'StaffSectionMembership')\n",
+							"  df = spark.sql(\"select _c0 Id, cast(_c1 as boolean) IsPrimaryStaffForSection, to_timestamp(_c2, 'MM/dd/yyyy hh:mm:ss a') EntryDate, to_timestamp(_c3, 'MM/dd/yyyy hh:mm:ss a') ExitDate, _c4 ExternalId, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c6, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c7 as boolean) IsActive, _c8 PersonId, _c9 RefStaffSectionRoleId, _c10 SectionId from StaffSectionMembership\")\n",
+							"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/StaffSectionMembership')\n",
+							"# StudentOrgAffiliation\n",
+							"dfsoa = spark.read.csv(stage1_m365 + '/Roster/StudentOrgAffiliation.csv', header='false')\n",
+							"if (dfsoa.count() > 0):\n",
+							"  has_student_org_affiliation_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(dfsoa, 'StudentOrgAffiliation')\n",
+							"  dfsoa = spark.sql(\"select _c0 Id, cast(_c1 as boolean) IsPrimary, to_timestamp(_c2, 'MM/dd/yyyy hh:mm:ss a') EntryDate, to_timestamp(_c3, 'MM/dd/yyyy hh:mm:ss a') ExitDate, _c4 ExternalId, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c6, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c7 as boolean) IsActive, _c8 OrgId, _c9 PersonId, _c10 RefGradeLevelId, _c11 RefStudentOrgRoleId, _c12 RefEnrollmentStatusId from StudentOrgAffiliation\")\n",
+							"  dfsoa.write.format('parquet').mode('overwrite').save(stage2 + '/m365/StudentOrgAffiliation')\n",
+							"# StudentSectionMembership\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/StudentSectionMembership.csv', header='false')\n",
+							"if (df.count() > 0):\n",
+							"  has_student_section_membership_records = True\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'StudentSectionMembership')\n",
+							"  df = spark.sql(\"select _c0 Id, to_timestamp(_c1, 'MM/dd/yyyy hh:mm:ss a') EntryDate, to_timestamp(_c2, 'MM/dd/yyyy hh:mm:ss a') ExitDate, _c3 ExternalId, to_timestamp(_c4, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c6 as boolean) IsActive, _c7 PersonId, _c8 RefGradeLevelWhenCourseTakenId, _c9 RefStudentSectionRoleId, _c10 SectionId from StudentSectionMembership\")\n",
+							"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/StudentSectionMembership')"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 226
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": true
+						},
+						"source": [
+							"# Org\r\n",
+							"from pyspark.sql.functions import countDistinct\r\n",
+							"df = spark.read.csv(stage1_m365 + '/Roster/Org.csv', header='false')\r\n",
+							"if (df.count() > 0):\r\n",
+							"  has_org_records = True\r\n",
+							"  sqlContext.registerDataFrameAsTable(df, 'Org')\r\n",
+							"  df = spark.sql(\"select _c0 Id, _c1 Name, _c2 Identifier, _c3 ExternalId, to_timestamp(_c4, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c6 as boolean) IsActive, _c7 ParentOrgId, _c8 RefOrgTypeId, _c9 SourceSystemId from Org\")\r\n",
+							"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/Org')\r\n",
+							"\r\n",
+							"  dfsoagrouped = dfsoa.groupBy(\"OrgId\").agg(countDistinct(\"personId\").alias(\"SumStudents\"))\r\n",
+							"  dfstaffoagrouped = dfstaffoa.groupBy(\"OrgId\").agg(countDistinct(\"personId\").alias(\"SumStaff\"))\r\n",
+							"  df = spark.sql(\"select _c0 Id, _c1 Name, _c2 Identifier, _c3 ExternalId from Org\")\r\n",
+							"  df = df.join(dfsoagrouped, df[\"Id\"] == dfsoagrouped[\"OrgId\"] ,\"left\").drop('OrgId').select(df['*'], dfsoagrouped[\"SumStudents\"]).na.fill(0)\r\n",
+							"  df = df.join(dfstaffoagrouped, df[\"Id\"] == dfstaffoagrouped[\"OrgId\"] ,\"left\").drop('OrgId').select(df['*'], dfstaffoagrouped[\"SumStaff\"]).na.fill(0)\r\n",
+							"  \r\n",
+							"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/OrgSummary')"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 227
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# Process Activity data from stage1 into stage2.\n",
+							"#\n",
+							"# If this is the first load, it loads all activity data.\n",
+							"# If this is a subsequent load, it determines the max date currently stored and only loads data from after that date.\n",
+							"\n",
+							"def append_to_activity_table(max_date=False):\n",
+							"    df = spark.read.csv(stage1_m365_activity, header='false') \n",
+							"    sqlContext.registerDataFrameAsTable(df, 'Activity')\n",
+							"    df_Activity = spark.sql(\"select _c0 SignalType, to_timestamp(_c1) StartTime, _c2 UserAgent, _c3 SignalId, _c4 SISClassId, _c5 OfficeClassId, _c6 ChannelId, _c7 AppName, _c8 ActorId, _c9 ActorRole, _c10 SchemaVersion, _c11 AssignmentId, _c12 SubmissionId, _c13 Action, _c14 AssginmentDueDate, _c15 ClassCreationDate, _c16 Grade, _c17 SourceFileExtension, _c18 MeetingDuration, '' PersonId from Activity\")    \n",
+							"  \n",
+							"    if (max_date):\n",
+							"      df_Activity = df_Activity.filter(df_Activity.StartTime > max_date)\n",
+							"\n",
+							"    if (df_Activity.count() == 0):\n",
+							"        print('No new activity data to load')\n",
+							"    else:\n",
+							"        print('Adding activity data later than: ' + str(max_date))\n",
+							"        # The assumption here is that there will always be data in these inbound files\n",
+							"        sqlContext.registerDataFrameAsTable(df_Activity, 'Activity')\n",
+							"        sqlContext.registerDataFrameAsTable(spark.read.format('parquet').load(stage2 + '/m365/PersonIdentifier'), 'PersonIdentifier')\n",
+							"        sqlContext.registerDataFrameAsTable(spark.read.format('parquet').load(stage2 + '/m365/RefDefinition'), 'RefDefinition')\n",
+							"   \n",
+							"        df1 = spark.sql( \\\n",
+							"        \"select act.SignalType, act.StartTime, act.UserAgent, act.SignalId, act.SISClassId, act.OfficeClassId, act.ChannelId, \\\n",
+							"        act.AppName, act.ActorId, act.ActorRole, act.SchemaVersion, act.AssignmentId, act.SubmissionId, act.Action, act.AssginmentDueDate, \\\n",
+							"        act.ClassCreationDate, act.Grade, act.SourceFileExtension, act.MeetingDuration, pi.PersonId \\\n",
+							"        from PersonIdentifier pi, RefDefinition rd, Activity act \\\n",
+							"        where \\\n",
+							"            pi.RefIdentifierTypeId = rd.Id \\\n",
+							"            and rd.RefType = 'RefIdentifierType' \\\n",
+							"            and rd.Code = 'ActiveDirectoryId' \\\n",
+							"            and pi.Identifier = act.ActorId \\\n",
+							"        \")\n",
+							"\n",
+							"        df1.write.format(\"parquet\").mode(\"append\").save(stage2 + '/m365/Activity0p2')\n",
+							"\n",
+							"try:\n",
+							"    df = spark.read.format('parquet').load(stage2 + '/m365/Activity0p2')\n",
+							"    sqlContext.registerDataFrameAsTable(df, 'Activity')\n",
+							"    # Bad data with a date in the future can prevent the uploading of new activity data, \n",
+							"    # so we ensure that the watermark is calculated on good data by filtering with CURRENT_TIMESTAMP\n",
+							"    df1 = spark.sql(\"select StartTime from Activity where StartTime < CURRENT_TIMESTAMP\")\n",
+							"    max_date = df1.agg({'StartTime': 'max'}).first()[0]\n",
+							"    print(max_date)\n",
+							"    append_to_activity_table(max_date)    \n",
+							"except:\n",
+							"    print(\"No Activity data has been loaded into stage2 data lake yet.\")\n",
+							"    append_to_activity_table()\n",
+							"\n",
+							""
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 228
+					},
+					{
+						"cell_type": "code",
+						"metadata": {
+							"jupyter": {
+								"source_hidden": false,
+								"outputs_hidden": false
+							},
+							"nteract": {
+								"transient": {
+									"deleting": false
+								}
+							},
+							"collapsed": true
+						},
+						"source": [
+							"# Org\r\n",
+							"if (has_org_records):\r\n",
+							"    spark.read.format('parquet').load(stage2 + '/m365/Org').write.format('parquet').mode('overwrite').save(stage3 + '/m365/Org')\r\n",
+							"    spark.read.format('parquet').load(stage2 + '/m365/OrgSummary').write.format('parquet').mode('overwrite').save(stage3 + '/m365/OrgSummary')\r\n",
+							""
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 229
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# Anonymize the M365 data from stage2 and load into stage3\n",
+							"\n",
+							"from pyspark.sql.functions import sha2, lit\n",
+							"# Activity\n",
+							"df = spark.read.format('parquet').load(stage2 + '/m365/Activity0p2')\n",
+							"df = df.withColumn('PersonId', sha2(df.PersonId, 256)).withColumn('ActorId', sha2(df.ActorId, 256))\n",
+							"df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/Activity0p2')\n",
+							"# Calendar, Course, Org\n",
+							"if (has_calendar_records):\n",
+							"    spark.read.format('parquet').load(stage2 + '/m365/Calendar').write.format('parquet').mode('overwrite').save(stage3 + '/m365/Calendar')\n",
+							"\n",
+							"if (has_course_records):\n",
+							"    spark.read.format('parquet').load(stage2 + '/m365/Course').write.format('parquet').mode('overwrite').save(stage3 + '/m365/Course')\n",
+							"\n",
+							"# Person\n",
+							"if (has_person_records):\n",
+							"    df = spark.read.format('parquet').load(stage2 + '/m365/Person')\n",
+							"    df = df.withColumn('Id', sha2(df.Id, 256)).withColumn('FirstName', lit('*')).withColumn(\"MiddleName\", lit('*')).withColumn('LastName', lit('*')).withColumn('ExternalId', sha2(df.ExternalId, 256))\n",
+							"    df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/Person')\n",
+							"\n",
+							"# PersonIdentifier\n",
+							"if (has_person_identifier_records):\n",
+							"    df = spark.read.format('parquet').load(stage2 + '/m365/PersonIdentifier')\n",
+							"    df = df.withColumn('PersonId', sha2(df.Id, 256)).withColumn('Identifier', lit('*')).withColumn(\"ExternalId\", lit('*'))\n",
+							"    df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/PersonIdentifier')\n",
+							"\n",
+							"# RefDefinition, Section, Session\n",
+							"if (has_ref_definition_records):\n",
+							"    spark.read.format('parquet').load(stage2 + '/m365/RefDefinition').write.format('parquet').mode('overwrite').save(stage3 + '/m365/RefDefinition')\n",
+							"\n",
+							"if (has_section_records):\n",
+							"    spark.read.format('parquet').load(stage2 + '/m365/Section').write.format('parquet').mode('overwrite').save(stage3 + '/m365/Section')\n",
+							"\n",
+							"if (has_session_records):\n",
+							"    spark.read.format('parquet').load(stage2 + '/m365/Session').write.format('parquet').mode('overwrite').save(stage3 + '/m365/Session')\n",
+							"\n",
+							"# StaffOrgAffiliation\n",
+							"if (has_staff_org_affiliation_records):\n",
+							"    df = spark.read.format('parquet').load(stage2 + '/m365/StaffOrgAffiliation')\n",
+							"    df = df.withColumn('PersonId', sha2(df.PersonId, 256)).withColumn('ExternalId', lit('*'))\n",
+							"    df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/StaffOrgAffiliation')\n",
+							"\n",
+							"# StaffSectionMembership\n",
+							"if (has_staff_section_membership_records):\n",
+							"    df = spark.read.format('parquet').load(stage2 + '/m365/StaffSectionMembership')\n",
+							"    df = df.withColumn('PersonId', sha2(df.PersonId, 256)).withColumn('ExternalId', lit('*'))\n",
+							"    df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/StaffSectionMembership')\n",
+							"\n",
+							"# StudentOrgAffiliation\n",
+							"if (has_student_org_affiliation_records):\n",
+							"    df = spark.read.format('parquet').load(stage2 + '/m365/StudentOrgAffiliation')\n",
+							"    df = df.withColumn('PersonId', sha2(df.PersonId, 256)).withColumn('ExternalId', lit('*'))\n",
+							"    df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/StudentOrgAffiliation')\n",
+							"\n",
+							"# StudentSectionMembership\n",
+							"if (has_student_section_membership_records):\n",
+							"    df = spark.read.format('parquet').load(stage2 + '/m365/StudentSectionMembership')\n",
+							"    df = df.withColumn('PersonId', sha2(df.PersonId, 256)).withColumn('ExternalId', lit('*'))\n",
+							"    df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/StudentSectionMembership')"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 230
+					},
+					{
+						"cell_type": "code",
+						"source": [
+							"# Create spark db to allow for access to the data in the delta-lake via SQL on-demand.\n",
+							"# This is only creating metadata for SQL on-demand, pointing to the data in the delta-lake.\n",
+							"# This also makes it possible to connect in Power BI via the azure sql data source connector.\n",
+							"def create_spark_db(db_name, source_path):\n",
+							"    spark.sql('CREATE DATABASE IF NOT EXISTS ' + db_name)\n",
+							"    spark.sql(\"create table if not exists \" + db_name + \".Activity using PARQUET location '\" + source_path + \"/Activity0p2'\")\n",
+							"    if (has_calendar_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".Calendar using PARQUET location '\" + source_path + \"/Calendar'\")\n",
+							"    \n",
+							"    if (has_course_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".Course using PARQUET location '\" + source_path + \"/Course'\")\n",
+							"    \n",
+							"    if (has_org_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".Org using PARQUET location '\" + source_path + \"/Org'\")\n",
+							"        spark.sql(\"drop table if exists \" + db_name + \".OrgSummary\")\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".OrgSummary using PARQUET location '\" + source_path + \"/OrgSummary'\")\n",
+							"    \n",
+							"    if (has_person_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".Person using PARQUET location '\" + source_path + \"/Person'\")\n",
+							"    \n",
+							"    if (has_person_identifier_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".PersonIdentifier using PARQUET location '\" + source_path + \"/PersonIdentifier'\")\n",
+							"    \n",
+							"    if (has_ref_definition_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".RefDefinition using PARQUET location '\" + source_path + \"/RefDefinition'\")\n",
+							"    \n",
+							"    if (has_section_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".Section using PARQUET location '\" + source_path + \"/Section'\")\n",
+							"    \n",
+							"    if (has_session_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".Session using PARQUET location '\" + source_path + \"/Session'\")\n",
+							"    \n",
+							"    if (has_staff_org_affiliation_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".StaffOrgAffiliation using PARQUET location '\" + source_path + \"/StaffOrgAffiliation'\")\n",
+							"    \n",
+							"    if (has_staff_section_membership_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".StaffSectionMembership using PARQUET location '\" + source_path + \"/StaffSectionMembership'\")\n",
+							"    \n",
+							"    if (has_student_org_affiliation_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".StudentOrgAffiliation using PARQUET location '\" + source_path + \"/StudentOrgAffiliation'\")\n",
+							"\n",
+							"    if (has_student_section_membership_records):\n",
+							"        spark.sql(\"create table if not exists \" + db_name + \".StudentSectionMembership using PARQUET location '\" + source_path + \"/StudentSectionMembership'\")\n",
+							"\n",
+							"db_prefix = 'test_' if use_test_env else ''\n",
+							"create_spark_db(db_prefix + 's2_m365', stage2 + '/m365')\n",
+							"create_spark_db(db_prefix + 's3_m365', stage3 + '/m365')"
+						],
+						"attachments": null,
+						"outputs": [],
+						"execution_count": 231
+					}
+				]
+			},
+			"dependsOn": []
+		}
+	]
+}
