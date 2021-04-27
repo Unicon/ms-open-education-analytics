@@ -1,0 +1,150 @@
+{
+	"name": "Google Classroom Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "Get Google Classroom Token",
+				"type": "AzureFunctionActivity",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"functionName": "GetOAuth2Token",
+					"method": "GET"
+				},
+				"linkedServiceName": {
+					"referenceName": "GoogleClassroomOAuthAzureFunction",
+					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "Set Google Classroom Access Token Variable",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Google Classroom Token",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "GoogleClassroomApiAccessToken",
+					"value": {
+						"value": "@activity('Get Google Classroom Token').output.token",
+						"type": "Expression"
+					}
+				}
+			},
+			{
+				"name": "Set Google Classroom Resources",
+				"type": "SetVariable",
+				"dependsOn": [
+					{
+						"activity": "Get Google Classroom Token",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "GoogleClassroomResources",
+					"value": [
+						"courses"
+					]
+				}
+			},
+			{
+				"name": "ForEachResource",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Set Google Classroom Resources",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@variables('GoogleClassroomResources')",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy data from API endpoint",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "RestSource",
+									"httpRequestTimeout": "00:01:40",
+									"requestInterval": "00.00:00:00.010",
+									"requestMethod": "GET"
+								},
+								"sink": {
+									"type": "JsonSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "JsonWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "GoogleClassroomRestResource",
+									"type": "DatasetReference",
+									"parameters": {
+										"resource": {
+											"value": "@item()",
+											"type": "Expression"
+										},
+										"bearerToken": {
+											"value": "\"Bearer \" + @variables('GoogleClassroomApiAccessToken')",
+											"type": "Expression"
+										}
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "GoogleClassroomJson",
+									"type": "DatasetReference"
+								}
+							]
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"GoogleClassroomApiAccessToken": {
+				"type": "String"
+			},
+			"GoogleClassroomResources": {
+				"type": "Array"
+			}
+		},
+		"annotations": []
+	}
+}

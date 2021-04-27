@@ -1,0 +1,26 @@
+{
+	"name": "GoogleClassroomRestResource",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "GoogleClarroomRestServiceV1",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"resource": {
+				"type": "string"
+			},
+			"bearerToken": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "RestResource",
+		"typeProperties": {
+			"relativeUrl": {
+				"value": "@dataset().resource",
+				"type": "Expression"
+			}
+		},
+		"schema": []
+	}
+}

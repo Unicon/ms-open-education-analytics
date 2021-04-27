@@ -1,0 +1,19 @@
+{
+	"name": "GoogleClassroomJson",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "DataLake",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Json",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "googleclassroom",
+				"fileSystem": "stage1"
+			}
+		},
+		"schema": {}
+	}
+}
