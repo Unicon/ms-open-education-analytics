@@ -1,0 +1,198 @@
+{
+	"name": "EdFi_create_serverless_sql",
+	"properties": {
+		"nbformat": 0,
+		"nbformat_minor": 0,
+		"bigDataPool": {
+			"referenceName": "spark1",
+			"type": "BigDataPoolReference"
+		},
+		"sessionProperties": {
+			"driverMemory": "28g",
+			"driverCores": 4,
+			"executorMemory": "28g",
+			"executorCores": 4,
+			"numExecutors": 2,
+			"conf": {
+				"spark.dynamicAllocation.enabled": "false",
+				"spark.dynamicAllocation.minExecutors": "2",
+				"spark.dynamicAllocation.maxExecutors": "2"
+			}
+		},
+		"metadata": {
+			"saveOutput": true,
+			"synapse_widget": {
+				"version": "0.1",
+				"state": {
+					"5c7d060d-cb3c-4ff0-af10-9d4944f17353": {
+						"type": "Synapse.DataFrame",
+						"sync_state": {
+							"table": {
+								"rows": [
+									{
+										"name": "AbsenceEventCategoryDescriptor"
+									},
+									{
+										"name": "AcademicHonorCategoryDescriptor"
+									},
+									{
+										"name": "AcademicSubjectDescriptor"
+									},
+									{
+										"name": "AcademicWeek"
+									},
+									{
+										"name": "AccommodationDescriptor"
+									},
+									{
+										"name": "Account"
+									},
+									{
+										"name": "AccountabilityRating"
+									},
+									{
+										"name": "AccountAccountCode"
+									},
+									{
+										"name": "AccountClassificationDescriptor"
+									},
+									{
+										"name": "AccountCode"
+									}
+								],
+								"schema": {
+									"name": "string"
+								}
+							},
+							"isSummary": false,
+							"language": "scala"
+						},
+						"persist_state": {
+							"view": {
+								"type": "details",
+								"chartOptions": {
+									"chartType": "bar",
+									"aggregationType": "count",
+									"categoryFieldKeys": [
+										"name"
+									],
+									"seriesFieldKeys": [
+										"name"
+									],
+									"isStacked": false
+								}
+							}
+						}
+					}
+				}
+			},
+			"kernelspec": {
+				"name": "synapse_pyspark",
+				"display_name": "Synapse PySpark"
+			},
+			"language_info": {
+				"name": "python"
+			},
+			"a365ComputeOptions": {
+				"id": "/subscriptions/88bc4ad2-b92a-4cec-9c63-bac0d9696a30/resourceGroups/rg-oea-esola/providers/Microsoft.Synapse/workspaces/syn-oea-esola/bigDataPools/spark1",
+				"name": "spark1",
+				"type": "Spark",
+				"endpoint": "https://syn-oea-esola.dev.azuresynapse.net/livyApi/versions/2019-11-01-preview/sparkPools/spark1",
+				"auth": {
+					"type": "AAD",
+					"authResource": "https://dev.azuresynapse.net"
+				},
+				"sparkVersion": "2.4",
+				"nodeCount": 3,
+				"cores": 4,
+				"memory": 28,
+				"extraHeader": null
+			}
+		},
+		"cells": [
+			{
+				"cell_type": "code",
+				"metadata": {
+					"outputCollapsed": true,
+					"microsoft": {
+						"language": "python"
+					},
+					"diagram": {
+						"activateDiagramType": 1,
+						"chartConfig": {
+							"category": "bar",
+							"keys": [
+								"AssessmentIdentifier"
+							],
+							"values": [
+								"AssessmentCategoryDescriptorId"
+							],
+							"yLabel": "AssessmentCategoryDescriptorId",
+							"xLabel": "AssessmentIdentifier",
+							"aggregation": "SUM",
+							"aggByBackend": false
+						},
+						"aggData": "{\"AssessmentCategoryDescriptorId\":{\"01774fa3-06f1-47fe-8801-c8b1e65057f2\":134,\"19bcfe00-9c75-4d4f-ac2c-706e7479070f\":134,\"1a6a5d20-4758-4f45-848d-59f3f03ae425\":134,\"39576404-04d2-4c06-a0e7-e2cb27968d01\":134,\"3e0e2cac-847b-4ddd-93ec-925826552447\":134,\"97e16cba-5fb0-438b-be0e-7f7fb6b591dc\":134,\"ACT Composite\":112,\"ACT English\":112,\"ACT Reading\":112,\"ACT Science\":112}}",
+						"isSummary": false,
+						"previewData": {
+							"filter": null
+						},
+						"isSql": false
+					},
+					"collapsed": false
+				},
+				"source": [
+					"%%pyspark\r\n",
+					"df = spark.read.load('abfss://stage1@stoeaesola.dfs.core.windows.net/ed-fi/sys.tables', format='parquet')\r\n",
+					"display(df.limit(10))"
+				],
+				"attachments": null,
+				"execution_count": 35
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"storage_account = 'stoeaesola'\n",
+					"use_test_env = False"
+				],
+				"attachments": null,
+				"execution_count": 38
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"if use_test_env:\n",
+					"    stage1 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage1'\n",
+					"    stage2 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage2'\n",
+					"    stage3 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage3'\n",
+					"else:\n",
+					"    stage1 = 'abfss://stage1@' + storage_account + '.dfs.core.windows.net'\n",
+					"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\n",
+					"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
+				],
+				"attachments": null,
+				"execution_count": 39
+			},
+			{
+				"cell_type": "code",
+				"source": [
+					"# Create spark db to allow for access to the data in the delta-lake via SQL on-demand.\n",
+					"# This is only creating metadata for SQL on-demand, pointing to the data in the delta-lake.\n",
+					"# This also makes it possible to connect in Power BI via the azure sql data source connector.\n",
+					"def create_spark_db(db_name, source_path, tables):\n",
+					"    spark.sql('CREATE DATABASE IF NOT EXISTS ' + db_name)\n",
+					"    for table in tables:\n",
+					"        copyDf = spark.read.format('parquet').load(stage1 + '/ed-fi/' + table.name)\n",
+					"        copyDf.write.format('parquet').mode('overwrite').save(source_path + \"/\" + table.name)\n",
+					"        spark.sql(\"create table if not exists \" + db_name + \".\" + table.name + \" using PARQUET location '\" + source_path + \"/\" + table.name + \"'\")\n",
+					"\n",
+					"df = spark.read.format('parquet').load(stage1 + '/ed-fi/sys.tables')\n",
+					"tables = df.rdd.collect()\n",
+					"create_spark_db('s2_edfi', stage2 + '/ed-fi', tables)"
+				],
+				"attachments": null,
+				"execution_count": 44
+			}
+		]
+	}
+}

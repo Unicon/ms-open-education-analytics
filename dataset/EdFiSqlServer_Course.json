@@ -1,0 +1,25 @@
+{
+	"name": "EdFiSqlServer_Course",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "EdFiSqlServer",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"tableName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "edfi",
+			"table": {
+				"value": "@dataset().tableName",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.Synapse/workspaces/datasets"
+}

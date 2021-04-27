@@ -1,0 +1,17 @@
+{
+	"name": "OnPremiseFileServer",
+	"type": "Microsoft.Synapse/workspaces/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "FileServer",
+		"typeProperties": {
+			"host": "c:\\temp\\oneroster",
+			"userId": "estock51@hotmail.com",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJjOTdlNmQ2Yi0zZjgzLTQ4OTUtYWI1My1kOTk2NDAyZGFiMTgiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "LocalIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

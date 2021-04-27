@@ -1,0 +1,16 @@
+{
+	"name": "EdFiSqlServer",
+	"type": "Microsoft.Synapse/workspaces/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"connectionString": "integrated security=False;data source=Erics-Desktop;initial catalog=EdFi_Ods_Populated_Template;user id=sa",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJmNmRiZGRlYi04N2ZmLTQxYWItYjc2Mi0wNWI2YmM1MWU0YmIiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "LocalIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

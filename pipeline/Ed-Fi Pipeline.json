@@ -1,0 +1,188 @@
+{
+	"name": "Ed-Fi Pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "LookupTableNames",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT t.name\nFROM sys.tables t\nJOIN sys.schemas s on s.schema_id = t.schema_id\nWHERE s.name = 'edfi'\nORDER BY t.Name",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "OnPremEdFiSqlServerTableLookup",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEachTableName",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupTableNames",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('LookupTableNames').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy_OnPrem_EdFi_SQLServer_Copy_Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "EdFiSqlServer_Course",
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "@item().Name"
+									}
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "EdFiParquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"folder": "@item().Name"
+									}
+								}
+							]
+						}
+					]
+				}
+			},
+			{
+				"name": "Copy_OnPrem_EdFi_SQLServer_Copy_SysTables",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "LookupTableNames",
+						"dependencyConditions": [
+							"Completed"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT t.name\nFROM sys.tables t\nJOIN sys.schemas s on s.schema_id = t.schema_id\nWHERE s.name = 'edfi'\nORDER BY t.name",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "name",
+									"type": "String",
+									"physicalType": "nvarchar"
+								},
+								"sink": {
+									"name": "name",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "SqlServerSysTable",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "EdFiParquet",
+						"type": "DatasetReference",
+						"parameters": {
+							"folder": "sys.tables"
+						}
+					}
+				]
+			}
+		],
+		"annotations": [],
+		"lastPublishTime": "2021-04-26T23:12:13Z"
+	},
+	"type": "Microsoft.Synapse/workspaces/pipelines"
+}
