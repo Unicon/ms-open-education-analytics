@@ -57,7 +57,7 @@
 					"from azure.keyvault.secrets import SecretClient\r\n",
 					"from azure.identity import DefaultAzureCredential"
 				],
-				"execution_count": 16
+				"execution_count": 15
 			},
 			{
 				"cell_type": "code",
@@ -74,9 +74,15 @@
 					"collapsed": true
 				},
 				"source": [
-					"oAuth2TokenUrl = \"https://olaoauth2.azurewebsites.net/api/GetOAuth2Token?code=yJy/F0xrQ3TrHsz2PqwRK8oUqAH4FdYDiyzcHV9X9hmgwfztrRUzjA==\""
+					"keyVaultName = \"oladevkeyvault\"\r\n",
+					"KVUri = f\"https://{keyVaultName}.vault.azure.net\"\r\n",
+					"credential = DefaultAzureCredential()\r\n",
+					"client = SecretClient(vault_url=KVUri, credential=credential)\r\n",
+					"code = client.get_secret(\"olaoauth2functionkey\")\r\n",
+					"\r\n",
+					"#oAuth2TokenUrl = f\"https://olaoauth2.azurewebsites.net/api/GetOAuth2Token?code={code}\""
 				],
-				"execution_count": 6
+				"execution_count": 16
 			},
 			{
 				"cell_type": "code",
