@@ -128,7 +128,13 @@
 							"outputs": [
 								{
 									"referenceName": "GoogleClassroomJson",
-									"type": "DatasetReference"
+									"type": "DatasetReference",
+									"parameters": {
+										"fileName": {
+											"value": "@concat(item(), '.json')",
+											"type": "Expression"
+										}
+									}
 								}
 							]
 						}
@@ -142,9 +148,6 @@
 			},
 			"GoogleClassroomResources": {
 				"type": "Array"
-			},
-			"temp": {
-				"type": "String"
 			}
 		},
 		"annotations": []
