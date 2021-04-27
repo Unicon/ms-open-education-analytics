@@ -1,6 +1,11 @@
 {
 	"name": "GoogleClarroomRestServiceV1",
 	"properties": {
+		"parameters": {
+			"bearerToken": {
+				"type": "string"
+			}
+		},
 		"annotations": [],
 		"type": "RestService",
 		"typeProperties": {
