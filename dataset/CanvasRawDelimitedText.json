@@ -1,0 +1,22 @@
+{
+	"name": "CanvasRawDelimitedText",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "DataLake",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "DelimitedText",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"folderPath": "canvas",
+				"fileSystem": "stage1"
+			},
+			"columnDelimiter": ",",
+			"escapeChar": "\\",
+			"quoteChar": "\""
+		},
+		"schema": []
+	}
+}
