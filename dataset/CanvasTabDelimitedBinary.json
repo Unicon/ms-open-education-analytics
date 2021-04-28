@@ -1,0 +1,19 @@
+{
+	"name": "CanvasTabDelimitedBinary",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "DataLake",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "Binary",
+		"typeProperties": {
+			"location": {
+				"type": "AzureBlobFSLocation",
+				"fileName": "*.csv",
+				"folderPath": "canvas",
+				"fileSystem": "stage1"
+			}
+		}
+	}
+}
