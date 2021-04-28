@@ -5,9 +5,9 @@
 		"annotations": [],
 		"type": "FileServer",
 		"typeProperties": {
-			"host": "C:\\adfShare\\canvasdump\\",
+			"host": "C:\\adfShare\\canvasdump",
 			"userId": "estock51@hotmail.com",
-			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiJmNTI1OGU1OC0zYmE3LTRhNmMtYTdlNy01MGI0YTBjZWQ3N2UiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiIyNGNiODg3NC1jODBlLTRmYTktYjI3YS1hNzcyNTUyZjI5OGUiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
 		},
 		"connectVia": {
 			"referenceName": "LocalIntegrationRuntime",
