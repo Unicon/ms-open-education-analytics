@@ -52,11 +52,12 @@
 			{
 				"cell_type": "code",
 				"source": [
+					"# Imports\r\n",
 					"import requests\r\n",
 					"import json\r\n",
 					"from pyspark.sql import SparkSession"
 				],
-				"execution_count": 1
+				"execution_count": 47
 			},
 			{
 				"cell_type": "code",
@@ -73,10 +74,14 @@
 					"collapsed": true
 				},
 				"source": [
+					"#Variables that need to be set\r\n",
 					"storage_account = 'stoeaesola'\r\n",
+					"keyVaultName = \"oladevkeyvault\"\r\n",
+					"secretKey = \"olaoauth2functionkey\"\r\n",
+					"linkedServiceName = \"AzureKeyVault\"\r\n",
 					"use_test_env = False"
 				],
-				"execution_count": 16
+				"execution_count": 48
 			},
 			{
 				"cell_type": "code",
@@ -93,6 +98,7 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Prod / Test Toggle\r\n",
 					"if use_test_env:\r\n",
 					"    stage1 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage1'\r\n",
 					"    stage2 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage2'\r\n",
@@ -102,7 +108,7 @@
 					"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\r\n",
 					"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
 				],
-				"execution_count": 17
+				"execution_count": 49
 			},
 			{
 				"cell_type": "code",
@@ -119,10 +125,7 @@
 					"collapsed": true
 				},
 				"source": [
-					"keyVaultName = \"oladevkeyvault\"\r\n",
-					"secretKey = \"olaoauth2functionkey\"\r\n",
-					"linkedServiceName = \"AzureKeyVault\"\r\n",
-					"\r\n",
+					"# Fetch Google Classroom API Bearer Token\r\n",
 					"ss = SparkSession.builder.getOrCreate()\r\n",
 					"sc = spark.sparkContext\r\n",
 					"\r\n",
@@ -133,7 +136,7 @@
 					"tokenJson = json.loads(r.text);\r\n",
 					"bearerToken = f\"Bearer {tokenJson['token']}\""
 				],
-				"execution_count": 9
+				"execution_count": 50
 			},
 			{
 				"cell_type": "code",
@@ -150,18 +153,57 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Load Google Classroom courses data into data frame and save to stage 1\r\n",
 					"googleClassroomBaseUrl = \"https://classroom.googleapis.com/v1/\"\r\n",
 					"googleClassroomRelativeUrl = \"courses\"\r\n",
 					"headers = {\"Authorization\" : bearerToken}\r\n",
 					"\r\n",
 					"r = requests.get(f\"{googleClassroomBaseUrl}{googleClassroomRelativeUrl}\", headers=headers)\r\n",
-					"df = spark.read.json(sc.parallelize([r.text]))\r\n",
-					"df.write.format('json').mode('overwrite').save(stage1 + '/googleclassroom/courses')\r\n",
-					"\r\n",
-					"\r\n",
-					""
+					"coursesJson = json.dumps(json.loads(r.text)[\"courses\"]);\r\n",
+					"coursesDf = spark.read.json(sc.parallelize([coursesJson]))\r\n",
+					"coursesDf.write.format('json').mode('overwrite').save(stage1 + '/googleclassroom/courses')"
 				],
-				"execution_count": 18
+				"execution_count": 51
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"def processCourseRow(row):\r\n",
+					"    courseId = row[\"id\"]"
+				],
+				"execution_count": 52
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"# Iterate through Courses to fetch course related data\r\n",
+					"coursesDf.foreach(processCourseRow)"
+				],
+				"execution_count": 60
 			}
 		]
 	}
