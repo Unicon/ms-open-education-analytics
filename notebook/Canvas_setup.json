@@ -68,7 +68,7 @@
 					"from pyspark.sql.functions import lit, col, when\r\n",
 					"from pyspark.sql.utils import AnalysisException"
 				],
-				"execution_count": 76
+				"execution_count": 105
 			},
 			{
 				"cell_type": "code",
@@ -224,11 +224,9 @@
 					"'_c0 id, _c1 canvas_id, _c2 parent_type, _c3 title, _c4 created_at, _c5 updated_at, _c6 front_page_url, _c7 has_no_front_page',\r\n",
 					"'_c0 id, _c1 canvas_id, _c2 title, _c3 body, _c4 workflow_state, _c5 created_at, _c6 updated_at, _c7 url, _c8 protected_editing, _c9 editing_roles, _c10 revised_at, _c11 could_be_locked',\r\n",
 					"'_c0 id, _c1 timestamp, _c2 timestamp_year, _c3 timestamp_month, _c4 timestamp_day, _c5 user_id, _c6 course_id, _c7 root_account_id, _c8 course_account_id, _c9 quiz_id, _c10 discussion_id, _c11 conversation_id, _c12 assignment_id, _c13 url, _c14 user_agent, _c15 http_method, _c16 remote_ip, _c17 interaction_micros, _c18 web_application_controller, _c19 web_application_action, _c20 web_application_context_type, _c21 web_application_context_id, _c22 real_user_id, _c23 session_id, _c24 user_agent_id, _c25 http_status, _c26 http_version, _c27 developer_key_id',\r\n",
-					"]\r\n",
-					"\r\n",
-					"entity_exists = False"
+					"]"
 				],
-				"execution_count": 63
+				"execution_count": 106
 			},
 			{
 				"cell_type": "code",
@@ -255,7 +253,7 @@
 					"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\r\n",
 					"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
 				],
-				"execution_count": 64
+				"execution_count": 107
 			},
 			{
 				"cell_type": "code",
@@ -275,7 +273,7 @@
 					"def backslash_n_as_null(x):\r\n",
 					"    return when(col(x) != \"\\\\N\", col(x)).otherwise(None)"
 				],
-				"execution_count": 65
+				"execution_count": 108
 			},
 			{
 				"cell_type": "code",
@@ -297,25 +295,23 @@
 					"# Save in stage 2 container\r\n",
 					"\r\n",
 					"def processStage2Entity(entityName, entityColumns):\r\n",
-					"    fileName = stage1 + f'/canvas/{entityName}.csv'\r\n",
-					"\r\n",
+					"    sourceData = stage1 + f'/canvas/{entityName}.csv'\r\n",
+					"    destinationData = stage2 + f'/canvas/{entityName}'\r\n",
 					"    try:\r\n",
-					"        df = spark.read.option(\"delimiter\", \"\\t\").csv(fileName, header='false')\r\n",
+					"        df = spark.read.option(\"delimiter\", \"\\t\").csv(sourceData, header='false')\r\n",
 					"        if (df.count() > 0):\r\n",
-					"            entity_exists = True;\r\n",
 					"            sqlContext.registerDataFrameAsTable(df, entityName)\r\n",
 					"            df = spark.sql(f\"select {entityColumns} from {entityName}\")\r\n",
 					"            for column_to_cleanse in canvas_entity_columns_to_cleanse_nulls:\r\n",
 					"                if (column_to_cleanse in df.columns):\r\n",
 					"                    print(f\"Cleansing column {column_to_cleanse} on entity {entityName}\")\r\n",
 					"                    df = df.withColumn(column_to_cleanse, backslash_n_as_null(column_to_cleanse))\r\n",
-					"            df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/canvas/{entityName}')\r\n",
+					"            df.write.format(\"parquet\").mode(\"overwrite\").save(destinationData)\r\n",
 					"    except AnalysisException:\r\n",
-					"        entity_exists = False;\r\n",
-					"        print(f\"File not found: {fileName}\")\r\n",
+					"        print(f\"Source data not found: {sourceData}\")\r\n",
 					"    "
 				],
-				"execution_count": 84
+				"execution_count": 109
 			},
 			{
 				"cell_type": "code",
@@ -337,17 +333,21 @@
 					"# Save in stage 3 container\r\n",
 					"\r\n",
 					"def processStage3Entity(entityName, entityColumns):\r\n",
-					"    fileName = stage2 + f'/canvas/{entityName}.csv'\r\n",
-					"    df = spark.read.format('parquet').load(fileName)\r\n",
-					"    if (df.count() > 0):\r\n",
-					"        for column_to_anonymize in canvas_entity_columns_to_anonymize:\r\n",
-					"            if (column_to_anonymize in df.columns):\r\n",
-					"                print(f\"Anonymizing column {column_to_anonymize} on entity {entityName}\")\r\n",
-					"                df = df.withColumn(column_to_anonymize, lit('*'))   \r\n",
-					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/canvas/{entityName}')\r\n",
+					"    sourceData = stage2 + f'/canvas/{entityName}'\r\n",
+					"    destinationData = stage3 + f'/canvas/{entityName}'\r\n",
+					"    try:\r\n",
+					"        df = spark.read.format('parquet').load(sourceData)\r\n",
+					"        if (df.count() > 0):\r\n",
+					"            for column_to_anonymize in canvas_entity_columns_to_anonymize:\r\n",
+					"                if (column_to_anonymize in df.columns):\r\n",
+					"                    print(f\"Anonymizing column {column_to_anonymize} on entity {entityName}\")\r\n",
+					"                    df = df.withColumn(column_to_anonymize, lit('*'))   \r\n",
+					"            df.write.format(\"parquet\").mode(\"overwrite\").save(destinationData)\r\n",
+					"    except AnalysisException:\r\n",
+					"        print(f\"File not found: {sourceData}\")\r\n",
 					"    "
 				],
-				"execution_count": 82
+				"execution_count": 110
 			},
 			{
 				"cell_type": "code",
@@ -369,10 +369,12 @@
 					"# This also makes it possible to connect in Power BI via the azure sql data source connector.\r\n",
 					"def create_spark_db(db_name, source_path, canvas_entity):\r\n",
 					"    spark.sql('CREATE DATABASE IF NOT EXISTS ' + db_name)\r\n",
-					"    spark.sql(\"create table if not exists \" + db_name + f\".{canvas_entity} using PARQUET location '\" + source_path + f\"/{canvas_entity}'\")  \r\n",
-					""
+					"    try:\r\n",
+					"        spark.sql(\"create table if not exists \" + db_name + f\".{canvas_entity} using PARQUET location '\" + source_path + f\"/{canvas_entity}'\")  \r\n",
+					"    except AnalysisException:\r\n",
+					"        print(f\"Table {canvas_entity} could not be created in {db_name}\")"
 				],
-				"execution_count": 69
+				"execution_count": 114
 			},
 			{
 				"cell_type": "code",
@@ -395,15 +397,14 @@
 					"\r\n",
 					"for canvas_entity in canvas_entities:\r\n",
 					"    print(\"Processing Canvas Entity: \" + canvas_entity)\r\n",
-					"    processStage2Entity(canvas_entity, canvas_entity_columns[index])\r\n",
-					"    if (entity_exists == True):\r\n",
-					"        processStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
-					"        create_spark_db(db_prefix + 's2_canvas', stage2 + '/canvas', canvas_entity)\r\n",
-					"        create_spark_db(db_prefix + 's3_canvas', stage3 + '/canvas', canvas_entity)\r\n",
+					"    #processStage2Entity(canvas_entity, canvas_entity_columns[index])\r\n",
+					"    #processStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
+					"    create_spark_db(db_prefix + 's2_canvas', stage2 + '/canvas', canvas_entity)\r\n",
+					"    #create_spark_db(db_prefix + 's3_canvas', stage3 + '/canvas', canvas_entity)\r\n",
 					"    index += 1\r\n",
 					""
 				],
-				"execution_count": 88
+				"execution_count": 115
 			}
 		]
 	}
