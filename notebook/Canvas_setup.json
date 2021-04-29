@@ -374,7 +374,7 @@
 					"    except AnalysisException:\r\n",
 					"        print(f\"Table {canvas_entity} could not be created in {db_name}\")"
 				],
-				"execution_count": 114
+				"execution_count": 116
 			},
 			{
 				"cell_type": "code",
@@ -400,11 +400,11 @@
 					"    #processStage2Entity(canvas_entity, canvas_entity_columns[index])\r\n",
 					"    #processStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
 					"    create_spark_db(db_prefix + 's2_canvas', stage2 + '/canvas', canvas_entity)\r\n",
-					"    #create_spark_db(db_prefix + 's3_canvas', stage3 + '/canvas', canvas_entity)\r\n",
+					"    create_spark_db(db_prefix + 's3_canvas', stage3 + '/canvas', canvas_entity)\r\n",
 					"    index += 1\r\n",
 					""
 				],
-				"execution_count": 115
+				"execution_count": 117
 			}
 		]
 	}
