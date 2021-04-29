@@ -65,9 +65,9 @@
 				},
 				"source": [
 					"# Import Statements\r\n",
-					"from pyspark.sql.functions import lit"
+					"from pyspark.sql.functions import lit, col, when"
 				],
-				"execution_count": 3
+				"execution_count": 54
 			},
 			{
 				"cell_type": "code",
@@ -278,6 +278,26 @@
 					"collapsed": true
 				},
 				"source": [
+					"def backslash_n_as_null(x):\r\n",
+					"    return when(col(x) != \"\\\\N\", col(x)).otherwise(None)"
+				],
+				"execution_count": 56
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
 					"# Process Stage 2 Entity\r\n",
 					"# Convert from Tab Delimited CSV to Parquet\r\n",
 					"# Save in stage 3 container\r\n",
@@ -289,10 +309,11 @@
 					"        df = spark.sql(f\"select {entityColumns} from {entityName}\")\r\n",
 					"        for column_to_cleanse in canvas_entity_columns_to_cleanse_nulls:\r\n",
 					"            if (column_to_cleanse in df.columns):\r\n",
-					"                df.where(df[column_to_cleanse].contains(\"\\\\N\")).withColumn(column_to_cleanse, lit(''))\r\n",
+					"                print(f\"Cleansing column {column_to_cleanse} on entity {entityName}\")\r\n",
+					"                df = df.withColumn(column_to_cleanse, backslash_n_as_null(column_to_cleanse))\r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/canvas/{entityName}')"
 				],
-				"execution_count": 37
+				"execution_count": 57
 			},
 			{
 				"cell_type": "code",
@@ -318,10 +339,11 @@
 					"    if (df.count() > 0):\r\n",
 					"        for column_to_anonymize in canvas_entity_columns_to_anonymize:\r\n",
 					"            if (column_to_anonymize in df.columns):\r\n",
-					"                df.withColumn(column_to_anonymize, lit('*'))   \r\n",
+					"                print(f\"Anonymizing column {column_to_anonymize} on entity {entityName}\")\r\n",
+					"                df = df.withColumn(column_to_anonymize, lit('*'))   \r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/canvas/{entityName}')"
 				],
-				"execution_count": 6
+				"execution_count": 61
 			},
 			{
 				"cell_type": "code",
@@ -392,13 +414,13 @@
 					"for canvas_entity in canvas_entities:\r\n",
 					"    print(\"Processing Canvas Entity: \" + canvas_entity)\r\n",
 					"    processStage2Entity(canvas_entity, canvas_entity_columns[index])\r\n",
-					"    #processStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
+					"    processStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
 					"    create_spark_db(db_prefix + 's2_canvas', stage2 + '/canvas', canvas_entity)\r\n",
 					"    create_spark_db(db_prefix + 's3_canvas', stage3 + '/canvas', canvas_entity)\r\n",
 					"    index += 1\r\n",
 					""
 				],
-				"execution_count": 41
+				"execution_count": 60
 			}
 		]
 	}
