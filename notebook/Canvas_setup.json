@@ -88,14 +88,19 @@
 					"storage_account = 'stoeaesola'\r\n",
 					"use_test_env = False\r\n",
 					"canvas_entities = ['account_dim', 'assignment_dim']\r\n",
+					"\r\n",
+					"\r\n",
+					"# Here is a JavaScript selector that you try to run in browser console on the Canvas Data Documentation for each entity to make it easier to derive the columns\r\n",
+					"# Its a crude DOM query so it may need tweeking\r\n",
+					"# [...document.querySelector(\"a[name='account_dim']\").closest(\"div.row\").querySelectorAll(\".schema-docs tbody tr td:first-of-type\")].reduce((accumulator, item, index) => accumulator + \" _c\" + (index-1) + \" \" + item.innerHTML + \",\")\r\n",
 					"canvas_entity_columns = [\r\n",
-					"    '_c0 Id', \r\n",
-					"    '_c0 Id'\r\n",
+					"    '_c0 canvas_id, _c1 name, _c2 depth, _c3 workflow_state, _c4 parent_account, _c5 parent_account_id, _c6 grandparent_account, _c7 grandparent_account_id, _c8 root_account, _c9 root_account_id, _c10 subaccount1, _c11 subaccount1_id, _c12 subaccount2, _c13 subaccount2_id, _c14 subaccount3, _c15 subaccount3_id, _c16 subaccount4, _c17 subaccount4_id, _c18 subaccount5, _c19 subaccount5_id, _c20 subaccount6, _c21 subaccount6_id, _c22 subaccount7, _c23 subaccount7_id, _c24 subaccount8, _c25 subaccount8_id, _c26 subaccount9, _c27 subaccount9_id, _c28 subaccount10, _c29 subaccount10_id, _c30 subaccount11, _c31 subaccount11_id, _c32 subaccount12, _c33 subaccount12_id, _c34 subaccount13, _c35 subaccount13_id, _c36 subaccount14, _c37 subaccount14_id, _c38 subaccount15, _c39 subaccount15_id, _c40 sis_source_id', \r\n",
+					"    '_c0 id'\r\n",
 					"]\r\n",
 					"\r\n",
-					"canvas_entity_columns_to_anonymize = ['Id']"
+					"canvas_entity_columns_to_anonymize = ['id']"
 				],
-				"execution_count": 19
+				"execution_count": 56
 			},
 			{
 				"cell_type": "code",
@@ -139,14 +144,18 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Process Stage 2 Entity\r\n",
+					"# Convert from Tab Delimited CSV to Parquet\r\n",
+					"# Save in stage 3 container\r\n",
+					"\r\n",
 					"def processStage2Entity(entityName, entityColumns):\r\n",
-					"    df = spark.read.csv(stage1 + f'/canvas/{entityName}.csv', header='false')\r\n",
+					"    df = spark.read.option(\"delimiter\", \"\\t\").csv(stage1 + f'/canvas/{entityName}.csv', header='false')\r\n",
 					"    if (df.count() > 0):\r\n",
 					"        sqlContext.registerDataFrameAsTable(df, entityName)\r\n",
 					"        df = spark.sql(f\"select {entityColumns} from {entityName}\")\r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/canvas/{entityName}')"
 				],
-				"execution_count": 29
+				"execution_count": 50
 			},
 			{
 				"cell_type": "code",
@@ -163,6 +172,10 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Process Stage 3 Entity\r\n",
+					"# Anonymize fields indicated in the canvas_entity_columns_to_anonymize array\r\n",
+					"# Save in stage 3 container\r\n",
+					"\r\n",
 					"def processStage3Entity(entityName, entityColumns):\r\n",
 					"    df = spark.read.format('parquet').load(stage2 + f'/canvas/{entityName}')\r\n",
 					"    if (df.count() > 0):\r\n",
@@ -171,7 +184,7 @@
 					"                df.withColumn(column_to_anonymize, lit('*'))   \r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/canvas/{entityName}')"
 				],
-				"execution_count": 47
+				"execution_count": 51
 			},
 			{
 				"cell_type": "code",
@@ -193,7 +206,7 @@
 					"    if (df.count() > 0):\r\n",
 					"        df.show()"
 				],
-				"execution_count": 45
+				"execution_count": 52
 			},
 			{
 				"cell_type": "code",
@@ -248,7 +261,7 @@
 					"    index += 1\r\n",
 					""
 				],
-				"execution_count": 49
+				"execution_count": 57
 			}
 		]
 	}
