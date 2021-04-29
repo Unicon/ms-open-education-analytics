@@ -3,8 +3,8 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "Copy Canvas data",
-				"type": "Copy",
+				"name": "Get Canvas File Names",
+				"type": "GetMetadata",
 				"dependsOn": [],
 				"policy": {
 					"timeout": "7.00:00:00",
@@ -15,74 +15,85 @@
 				},
 				"userProperties": [],
 				"typeProperties": {
-					"source": {
-						"type": "BinarySource",
-						"storeSettings": {
-							"type": "FileServerReadSettings",
-							"recursive": true,
-							"deleteFilesAfterCompletion": false
-						},
-						"formatSettings": {
-							"type": "BinaryReadSettings"
-						}
-					},
-					"sink": {
-						"type": "BinarySink",
-						"storeSettings": {
-							"type": "AzureBlobFSWriteSettings"
-						}
-					},
-					"enableStaging": false
-				},
-				"inputs": [
-					{
+					"dataset": {
 						"referenceName": "CanvasOnPremData",
 						"type": "DatasetReference"
+					},
+					"fieldList": [
+						"childItems"
+					],
+					"storeSettings": {
+						"type": "FileServerReadSettings",
+						"enablePartitionDiscovery": false
+					},
+					"formatSettings": {
+						"type": "BinaryReadSettings"
 					}
-				],
-				"outputs": [
-					{
-						"referenceName": "CanvasTabDelimitedBinary",
-						"type": "DatasetReference"
-					}
-				]
+				}
 			},
 			{
-				"name": "Lookup Files",
-				"type": "Lookup",
+				"name": "ForEachCanvasFile",
+				"type": "ForEach",
 				"dependsOn": [
 					{
-						"activity": "Copy Canvas data",
+						"activity": "Get Canvas File Names",
 						"dependencyConditions": [
 							"Completed"
 						]
 					}
 				],
-				"policy": {
-					"timeout": "7.00:00:00",
-					"retry": 0,
-					"retryIntervalInSeconds": 30,
-					"secureOutput": false,
-					"secureInput": false
-				},
 				"userProperties": [],
 				"typeProperties": {
-					"source": {
-						"type": "DelimitedTextSource",
-						"storeSettings": {
-							"type": "AzureBlobFSReadSettings",
-							"fileListPath": "stage1/canvas",
-							"enablePartitionDiscovery": false
-						},
-						"formatSettings": {
-							"type": "DelimitedTextReadSettings"
+					"items": {
+						"value": "@activity('Get Canvas File Names').output.childItems",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "Copy and rename data File",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "BinarySource",
+									"storeSettings": {
+										"type": "AzureBlobFSReadSettings",
+										"recursive": true
+									},
+									"formatSettings": {
+										"type": "BinaryReadSettings"
+									}
+								},
+								"sink": {
+									"type": "BinarySink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									}
+								},
+								"enableStaging": false
+							},
+							"inputs": [
+								{
+									"referenceName": "CanvasTabDelimitedBinary",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "CanvasTabDelimitedBinary",
+									"type": "DatasetReference"
+								}
+							]
 						}
-					},
-					"dataset": {
-						"referenceName": "CanvasRawDelimitedText",
-						"type": "DatasetReference"
-					},
-					"firstRowOnly": false
+					]
 				}
 			}
 		],
