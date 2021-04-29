@@ -64,8 +64,36 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Import Statements\r\n",
+					"from pyspark.sql.functions import lit"
+				],
+				"execution_count": 43
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"# Non-Static Variables\r\n",
 					"storage_account = 'stoeaesola'\r\n",
-					"use_test_env = False"
+					"use_test_env = False\r\n",
+					"canvas_entities = ['account_dim', 'assignment_dim']\r\n",
+					"canvas_entity_columns = [\r\n",
+					"    '_c0 Id', \r\n",
+					"    '_c0 Id'\r\n",
+					"]\r\n",
+					"\r\n",
+					"canvas_entity_columns_to_anonymize = ['Id']"
 				],
 				"execution_count": 19
 			},
@@ -84,6 +112,7 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Production / Test Environment Toggle\r\n",
 					"if use_test_env:\r\n",
 					"    stage1 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage1'\r\n",
 					"    stage2 = 'abfss://test-env@' + storage_account + '.dfs.core.windows.net/stage2'\r\n",
@@ -137,9 +166,12 @@
 					"def processStage3Entity(entityName, entityColumns):\r\n",
 					"    df = spark.read.format('parquet').load(stage2 + f'/canvas/{entityName}')\r\n",
 					"    if (df.count() > 0):\r\n",
+					"        for column_to_anonymize in canvas_entity_columns_to_anonymize:\r\n",
+					"            if (column_to_anonymize in df.columns):\r\n",
+					"                df.withColumn(column_to_anonymize, lit('*'))   \r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/canvas/{entityName}')"
 				],
-				"execution_count": 32
+				"execution_count": 47
 			},
 			{
 				"cell_type": "code",
@@ -156,39 +188,67 @@
 					"collapsed": true
 				},
 				"source": [
-					"canvas_entities = ['account_dim', 'assignment_dim']\r\n",
-					"canvas_entity_columns = [\r\n",
-					"    '_c0 Id', \r\n",
-					"    '_c0 Id'\r\n",
-					"]\r\n",
+					"def previewStage3Entity(entityName, entityColumns):\r\n",
+					"    df = spark.read.format('parquet').load(stage3 + f'/canvas/{entityName}')\r\n",
+					"    if (df.count() > 0):\r\n",
+					"        df.show()"
+				],
+				"execution_count": 45
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"# Create spark db to allow for access to the data in the delta-lake via SQL on-demand.\r\n",
+					"# This is only creating metadata for SQL on-demand, pointing to the data in the delta-lake.\r\n",
+					"# This also makes it possible to connect in Power BI via the azure sql data source connector.\r\n",
+					"def create_spark_db(db_name, source_path, canvas_entity):\r\n",
+					"    spark.sql('CREATE DATABASE IF NOT EXISTS ' + db_name)\r\n",
+					"    spark.sql(\"create table if not exists \" + db_name + f\".{canvas_entity} using PARQUET location '\" + source_path + f\"/{canvas_entity}'\")  \r\n",
+					""
+				],
+				"execution_count": 48
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
 					"\r\n",
 					"index = 0;\r\n",
+					"db_prefix = 'test_' if use_test_env else ''\r\n",
+					"\r\n",
 					"for canvas_entity in canvas_entities:\r\n",
 					"    processStage2Entity(canvas_entity, canvas_entity_columns[index])\r\n",
 					"    processStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
+					"    previewStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
+					"    create_spark_db(db_prefix + 's2_canvas', stage2 + '/canvas', canvas_entity)\r\n",
+					"    create_spark_db(db_prefix + 's3_canvas', stage3 + '/canvas', canvas_entity)\r\n",
 					"    index += 1\r\n",
 					""
 				],
-				"execution_count": 33
-			},
-			{
-				"cell_type": "code",
-				"metadata": {
-					"jupyter": {
-						"source_hidden": false,
-						"outputs_hidden": false
-					},
-					"nteract": {
-						"transient": {
-							"deleting": false
-						}
-					},
-					"collapsed": true
-				},
-				"source": [
-					""
-				],
-				"execution_count": null
+				"execution_count": 49
 			}
 		]
 	}
