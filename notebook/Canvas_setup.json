@@ -88,6 +88,12 @@
 					"storage_account = 'stoeaesola'\r\n",
 					"use_test_env = False\r\n",
 					"\r\n",
+					"# PII to remove\r\n",
+					"canvas_entity_columns_to_anonymize = ['assignment_id']\r\n",
+					"\r\n",
+					"#Empty values to cleanse\r\n",
+					"canvas_entity_columns_to_cleanse_nulls = ['external_tool_id']\r\n",
+					"\r\n",
 					"# Here is a JavaScript selector that you try to run in browser console on the Canvas Data Documentation for identifying entities\r\n",
 					"# Its a crude DOM query so it may need tweeking \r\n",
 					"# console.log([...document.querySelectorAll(\"h2 a[name]\")].reduce((accumulator, item, index) => accumulator + \"'\" + item.innerHTML + \"',\", \"\"))\r\n",
@@ -226,9 +232,9 @@
 					"'_c0 id, _c1 timestamp, _c2 timestamp_year, _c3 timestamp_month, _c4 timestamp_day, _c5 user_id, _c6 course_id, _c7 root_account_id, _c8 course_account_id, _c9 quiz_id, _c10 discussion_id, _c11 conversation_id, _c12 assignment_id, _c13 url, _c14 user_agent, _c15 http_method, _c16 remote_ip, _c17 interaction_micros, _c18 web_application_controller, _c19 web_application_action, _c20 web_application_context_type, _c21 web_application_context_id, _c22 real_user_id, _c23 session_id, _c24 user_agent_id, _c25 http_status, _c26 http_version, _c27 developer_key_id',\r\n",
 					"]\r\n",
 					"\r\n",
-					"canvas_entity_columns_to_anonymize = ['id']"
+					""
 				],
-				"execution_count": 33
+				"execution_count": 40
 			},
 			{
 				"cell_type": "code",
@@ -281,9 +287,12 @@
 					"    if (df.count() > 0):\r\n",
 					"        sqlContext.registerDataFrameAsTable(df, entityName)\r\n",
 					"        df = spark.sql(f\"select {entityColumns} from {entityName}\")\r\n",
+					"        for column_to_cleanse in canvas_entity_columns_to_cleanse_nulls:\r\n",
+					"            if (column_to_cleanse in df.columns):\r\n",
+					"                df.where(df[column_to_cleanse].contains(\"\\\\N\")).withColumn(column_to_cleanse, lit(''))\r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/canvas/{entityName}')"
 				],
-				"execution_count": 31
+				"execution_count": 37
 			},
 			{
 				"cell_type": "code",
@@ -383,13 +392,13 @@
 					"for canvas_entity in canvas_entities:\r\n",
 					"    print(\"Processing Canvas Entity: \" + canvas_entity)\r\n",
 					"    processStage2Entity(canvas_entity, canvas_entity_columns[index])\r\n",
-					"    processStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
+					"    #processStage3Entity(canvas_entity, canvas_entity_columns[index])\r\n",
 					"    create_spark_db(db_prefix + 's2_canvas', stage2 + '/canvas', canvas_entity)\r\n",
 					"    create_spark_db(db_prefix + 's3_canvas', stage3 + '/canvas', canvas_entity)\r\n",
 					"    index += 1\r\n",
 					""
 				],
-				"execution_count": 34
+				"execution_count": 41
 			}
 		]
 	}
