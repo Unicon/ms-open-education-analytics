@@ -93,7 +93,8 @@
 					"# console.log([...document.querySelectorAll(\"h2 a[name]\")].reduce((accumulator, item, index) => accumulator + \"'\" + item.innerHTML + \"',\", \"\"))\r\n",
 					"canvas_entities = [\r\n",
 					"    'assignment_fact',\r\n",
-					"    #'assignment_group_fact','assignment_group_score_fact','assignment_override_fact','assignment_override_user_fact','assignment_override_user_rollup_fact','catalog_order_fact','catalog_order_item_fact','catalog_payment_fact','catalog_product_fact','catalog_program_requirement_fact','catalog_promotion_fact','communication_channel_fact','conference_fact','conference_participant_fact','conversation_message_participant_fact','course_score_fact','course_ui_navigation_item_fact','discussion_entry_fact','discussion_topic_fact','enrollment_fact','external_tool_activation_fact','file_fact','grading_period_fact','grading_period_score_fact','group_fact','group_membership_fact','learning_outcome_fact','learning_outcome_group_association_fact','learning_outcome_group_fact','learning_outcome_question_result_fact','learning_outcome_result_fact','learning_outcome_rubric_criterion_fact','module_completion_requirement_fact','module_fact','module_item_fact','module_prerequisite_fact','module_progression_completion_requirement_fact','module_progression_fact','pseudonym_fact','quiz_fact','quiz_question_answer_fact','quiz_question_fact','quiz_question_group_fact','quiz_submission_fact','quiz_submission_historical_fact','submission_comment_fact','submission_fact','submission_file_fact','wiki_fact','wiki_page_fact','account_dim','assignment_dim','assignment_group_dim','assignment_group_rule_dim','assignment_group_score_dim','assignment_override_dim','assignment_override_user_dim','assignment_rule_dim','catalog_applicant_dim','catalog_dim','catalog_enrollment_dim','catalog_order_dim','catalog_order_item_dim','catalog_payment_dim','catalog_product_dim','catalog_product_tag_dim','catalog_promotion_dim','catalog_tag_dim','catalog_user_registration_dim','communication_channel_dim','conference_dim','conference_participant_dim','conversation_dim','conversation_message_dim','course_dim','course_score_dim','course_section_dim','course_ui_canvas_navigation_dim','course_ui_navigation_item_dim','discussion_entry_dim','discussion_topic_dim','enrollment_dim','enrollment_rollup_dim','enrollment_term_dim','external_tool_activation_dim','file_dim','grading_period_dim','grading_period_group_dim','grading_period_score_dim','group_dim','group_membership_dim','learning_outcome_dim','learning_outcome_group_dim','learning_outcome_question_result_dim','learning_outcome_result_dim','learning_outcome_rubric_criterion_dim','module_completion_requirement_dim','module_dim','module_item_dim','module_prerequisite_dim','module_progression_completion_requirement_dim','module_progression_dim','pseudonym_dim','quiz_dim','quiz_question_answer_dim','quiz_question_dim','quiz_question_group_dim','quiz_submission_dim','quiz_submission_historical_dim','role_dim','submission_comment_dim','submission_dim','user_dim','wiki_dim','wiki_page_dim','requests',\r\n",
+					"    'assignment_group_fact'\r\n",
+					"    #,'assignment_group_score_fact','assignment_override_fact','assignment_override_user_fact','assignment_override_user_rollup_fact','catalog_order_fact','catalog_order_item_fact','catalog_payment_fact','catalog_product_fact','catalog_program_requirement_fact','catalog_promotion_fact','communication_channel_fact','conference_fact','conference_participant_fact','conversation_message_participant_fact','course_score_fact','course_ui_navigation_item_fact','discussion_entry_fact','discussion_topic_fact','enrollment_fact','external_tool_activation_fact','file_fact','grading_period_fact','grading_period_score_fact','group_fact','group_membership_fact','learning_outcome_fact','learning_outcome_group_association_fact','learning_outcome_group_fact','learning_outcome_question_result_fact','learning_outcome_result_fact','learning_outcome_rubric_criterion_fact','module_completion_requirement_fact','module_fact','module_item_fact','module_prerequisite_fact','module_progression_completion_requirement_fact','module_progression_fact','pseudonym_fact','quiz_fact','quiz_question_answer_fact','quiz_question_fact','quiz_question_group_fact','quiz_submission_fact','quiz_submission_historical_fact','submission_comment_fact','submission_fact','submission_file_fact','wiki_fact','wiki_page_fact','account_dim','assignment_dim','assignment_group_dim','assignment_group_rule_dim','assignment_group_score_dim','assignment_override_dim','assignment_override_user_dim','assignment_rule_dim','catalog_applicant_dim','catalog_dim','catalog_enrollment_dim','catalog_order_dim','catalog_order_item_dim','catalog_payment_dim','catalog_product_dim','catalog_product_tag_dim','catalog_promotion_dim','catalog_tag_dim','catalog_user_registration_dim','communication_channel_dim','conference_dim','conference_participant_dim','conversation_dim','conversation_message_dim','course_dim','course_score_dim','course_section_dim','course_ui_canvas_navigation_dim','course_ui_navigation_item_dim','discussion_entry_dim','discussion_topic_dim','enrollment_dim','enrollment_rollup_dim','enrollment_term_dim','external_tool_activation_dim','file_dim','grading_period_dim','grading_period_group_dim','grading_period_score_dim','group_dim','group_membership_dim','learning_outcome_dim','learning_outcome_group_dim','learning_outcome_question_result_dim','learning_outcome_result_dim','learning_outcome_rubric_criterion_dim','module_completion_requirement_dim','module_dim','module_item_dim','module_prerequisite_dim','module_progression_completion_requirement_dim','module_progression_dim','pseudonym_dim','quiz_dim','quiz_question_answer_dim','quiz_question_dim','quiz_question_group_dim','quiz_submission_dim','quiz_submission_historical_dim','role_dim','submission_comment_dim','submission_dim','user_dim','wiki_dim','wiki_page_dim','requests',\r\n",
 					"]\r\n",
 					"\r\n",
 					"# Here is a JavaScript selector that you try to run in browser console on the Canvas Data Documentation for each entity to make it easier to derive the columns\r\n",
@@ -101,7 +102,8 @@
 					"# For each table change a[name='TABLE_NAME_GOES_HERE'] to match your table\r\n",
 					"# console.log([...document.querySelectorAll(\"h2 a[name]\")].reduce((accumulator, item, index) => accumulator + [...document.querySelector(\"a[name='\" + item.innerHTML + \"']\").closest(\"div.row\").querySelectorAll(\".schema-docs tbody tr td:first-of-type\")].reduce((accumulator2, item2, index2, original) => accumulator2 + \"_c\" + index2 + \" \" + item2.innerHTML + (index2+1 < original.length ? \", \" : \"\"), \"'\") + \"',\\n\", \"\"))\r\n",
 					"canvas_entity_columns = [\r\n",
-					"'_c0 assignment_id, _c1 course_id, _c2 course_account_id, _c3 enrollment_term_id, _c4 points_possible, _c5 peer_review_count, _c6 assignment_group_id, _c7 external_tool_id'\r\n",
+					"'_c0 assignment_id, _c1 course_id, _c2 course_account_id, _c3 enrollment_term_id, _c4 points_possible, _c5 peer_review_count, _c6 assignment_group_id, _c7 external_tool_id',\r\n",
+					"'_c0 assignment_group_id, _c1 course_id, _c2 group_weight',\r\n",
 					"]\r\n",
 					"\r\n",
 					"canvas_entity_columns2 = [\r\n",
@@ -226,7 +228,7 @@
 					"\r\n",
 					"canvas_entity_columns_to_anonymize = ['id']"
 				],
-				"execution_count": 27
+				"execution_count": 33
 			},
 			{
 				"cell_type": "code",
@@ -281,7 +283,7 @@
 					"        df = spark.sql(f\"select {entityColumns} from {entityName}\")\r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/canvas/{entityName}')"
 				],
-				"execution_count": 25
+				"execution_count": 31
 			},
 			{
 				"cell_type": "code",
@@ -387,7 +389,7 @@
 					"    index += 1\r\n",
 					""
 				],
-				"execution_count": 29
+				"execution_count": 34
 			}
 		]
 	}
