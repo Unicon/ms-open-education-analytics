@@ -79,9 +79,10 @@
 					"keyVaultName = \"oladevkeyvault\"\r\n",
 					"secretKey = \"olaoauth2functionkey\"\r\n",
 					"linkedServiceName = \"AzureKeyVault\"\r\n",
+					"oAuth2TokenUrl = f\"https://olagoogleoauth2.azurewebsites.net/api/GetOAuth2Token?code={code}\"\r\n",
 					"use_test_env = False"
 				],
-				"execution_count": 2
+				"execution_count": 8
 			},
 			{
 				"cell_type": "code",
@@ -131,12 +132,11 @@
 					"\r\n",
 					"token_library = ss._jvm.com.microsoft.azure.synapse.tokenlibrary.TokenLibrary\r\n",
 					"code = token_library.getSecret(keyVaultName, secretKey, linkedServiceName)\r\n",
-					"oAuth2TokenUrl = f\"https://olaoauth2.azurewebsites.net/api/GetOAuth2Token?code={code}\"\r\n",
 					"r = requests.get(oAuth2TokenUrl)\r\n",
 					"tokenJson = json.loads(r.text);\r\n",
 					"bearerToken = f\"Bearer {tokenJson['token']}\""
 				],
-				"execution_count": 4
+				"execution_count": 16
 			},
 			{
 				"cell_type": "code",
@@ -161,7 +161,26 @@
 					"        \"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36\"\r\n",
 					"        }    "
 				],
-				"execution_count": 15
+				"execution_count": 13
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"print(bearerToken)"
+				],
+				"execution_count": 17
 			},
 			{
 				"cell_type": "code",
@@ -188,7 +207,7 @@
 					"coursesDf = spark.read.json(sc.parallelize([coursesJson]))\r\n",
 					"coursesDf.write.format('json').mode('overwrite').save(stage1 + '/googleclassroom/courses')"
 				],
-				"execution_count": 19
+				"execution_count": 18
 			},
 			{
 				"cell_type": "code",
@@ -228,11 +247,78 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Process Stage 2 Entity\r\n",
+					"# Convert from JSON to Parquet\r\n",
+					"# Save in stage 2 container\r\n",
+					"\r\n",
+					"def processStage2Entity(entityName):\r\n",
+					"    sourceData = stage1 + f'/googleclassroom/{entityName}'\r\n",
+					"    destinationData = stage2 + f'/googleclassroom/{entityName}'\r\n",
+					"    try:\r\n",
+					"        df = spark.read.json(sourceData)\r\n",
+					"        df.show()\r\n",
+					"        #if (df.count() > 0):\r\n",
+					"            #sqlContext.registerDataFrameAsTable(df, entityName)\r\n",
+					"            #df = spark.sql(f\"select {entityColumns} from {entityName}\")\r\n",
+					"            #for column_to_cleanse in canvas_entity_columns_to_cleanse_nulls:\r\n",
+					"             #   if (column_to_cleanse in df.columns):\r\n",
+					"              #      print(f\"Cleansing column {column_to_cleanse} on entity {entityName}\")\r\n",
+					"               #     df = df.withColumn(column_to_cleanse, backslash_n_as_null(column_to_cleanse))\r\n",
+					"            #df.write.format(\"parquet\").mode(\"overwrite\").save(destinationData)\r\n",
+					"    except AnalysisException:\r\n",
+					"        print(f\"Source data not found: {sourceData}\")"
+				],
+				"execution_count": 26
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
 					"def processCourseRow(row):\r\n",
 					"    courseId = row[\"id\"]\r\n",
-					"    ingestResource(courseId, \"students\")"
+					"    #ingestResource(courseId, \"students\")\r\n",
+					"    processStage2Entity(\"students\")\r\n",
+					"    #ingestResource(courseId, \"teachers\")"
 				],
-				"execution_count": 21
+				"execution_count": 27
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"# Create spark db to allow for access to the data in the delta-lake via SQL on-demand.\r\n",
+					"# This is only creating metadata for SQL on-demand, pointing to the data in the delta-lake.\r\n",
+					"# This also makes it possible to connect in Power BI via the azure sql data source connector.\r\n",
+					"def create_spark_db(db_name, source_path, google_entity):\r\n",
+					"    spark.sql('CREATE DATABASE IF NOT EXISTS ' + db_name)\r\n",
+					"    try:\r\n",
+					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
+					"    except AnalysisException:\r\n",
+					"        print(f\"Table {canvas_entity} could not be created in {db_name}\")"
+				],
+				"execution_count": 25
 			},
 			{
 				"cell_type": "code",
@@ -251,9 +337,13 @@
 				"source": [
 					"# Iterate through Courses to fetch course related data\r\n",
 					"for i in coursesDf.rdd.toLocalIterator():\r\n",
-					"    processCourseRow(i)"
+					"    processCourseRow(i)\r\n",
+					"\r\n",
+					"\r\n",
+					"#create_spark_db(db_prefix + 's2_googleclassroom', stage2 + '/googleclassroom', google_entity)\r\n",
+					"#create_spark_db(db_prefix + 's3_googleclassroom', stage3 + '/googleclassroom', google_entity)"
 				],
-				"execution_count": 24
+				"execution_count": 28
 			}
 		]
 	}
