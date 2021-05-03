@@ -60,7 +60,7 @@
 					"from pyspark.sql.functions import from_json, col\r\n",
 					"from notebookutils import mssparkutils"
 				],
-				"execution_count": 172
+				"execution_count": 462
 			},
 			{
 				"cell_type": "code",
@@ -85,7 +85,7 @@
 					"use_test_env = False\r\n",
 					"oAuth2TokenBaseUrl = f\"https://olagoogleoauth2.azurewebsites.net/api/GetOAuth2Token\""
 				],
-				"execution_count": 173
+				"execution_count": 463
 			},
 			{
 				"cell_type": "code",
@@ -112,7 +112,7 @@
 					"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\r\n",
 					"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
 				],
-				"execution_count": 174
+				"execution_count": 464
 			},
 			{
 				"cell_type": "code",
@@ -139,9 +139,12 @@
 					"if (len(code) > 0):\r\n",
 					"    r = requests.get(oAuth2TokenUrl)\r\n",
 					"    tokenJson = json.loads(r.text);\r\n",
-					"    bearerToken = f\"Bearer {tokenJson['token']}\""
+					"    bearerToken = f\"Bearer {tokenJson['token']}\"\r\n",
+					"    bearerToken = \"Bearer ya29.a0AfH6SMDI6siRbNxF-pYr_NJWWhrIAyItdezorcTEZn-m2ueW44L6yeUr-lUFQraRak2lVnFpW_9zVhNgQl_T8dMBOghCoLpsdZYSUhJfyXV5BBYc6irBD1hA1y5vjplebDl01ee9a01L8UiEzdDg5AmEuTFu_w\"\r\n",
+					"else:\r\n",
+					"    print(\"Function app code not found\")"
 				],
-				"execution_count": 175
+				"execution_count": 465
 			},
 			{
 				"cell_type": "code",
@@ -166,7 +169,7 @@
 					"        \"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36\"\r\n",
 					"        }    "
 				],
-				"execution_count": 176
+				"execution_count": 466
 			},
 			{
 				"cell_type": "code",
@@ -184,12 +187,14 @@
 				},
 				"source": [
 					"def ingestResource(courseId, resource):\r\n",
-					"    r = requests.get(f\"{googleClassroomBaseUrl}{googleClassroomRelativeUrl}/{courseId}/{resource}\", headers=headers)\r\n",
+					"    headers = getRequestHeaders()\r\n",
+					"    apiUrl = f\"https://classroom.googleapis.com/v1/courses/{courseId}/{resource}\"\r\n",
+					"    r = requests.get(apiUrl, headers=headers)\r\n",
 					"    resourcesJson = json.dumps(json.loads(r.text)[resource]);\r\n",
 					"    resourceDf = spark.read.json(sc.parallelize([resourcesJson]))\r\n",
 					"    resourceDf.write.format('json').mode('append').save(stage1 + f'/googleclassroom/{resource}')"
 				],
-				"execution_count": 177
+				"execution_count": 467
 			},
 			{
 				"cell_type": "code",
@@ -211,16 +216,13 @@
 					"# Save in stage 1 container\r\n",
 					"def processStage1Courses():\r\n",
 					"    # Load Google Classroom courses data into data frame and save to stage 1\r\n",
-					"    googleClassroomBaseUrl = \"https://classroom.googleapis.com/v1/\"\r\n",
-					"    googleClassroomRelativeUrl = \"courses\"\r\n",
 					"    headers = getRequestHeaders()\r\n",
-					"\r\n",
-					"    r = requests.get(f\"{googleClassroomBaseUrl}{googleClassroomRelativeUrl}\", headers=headers)\r\n",
+					"    r = requests.get(f\"https://classroom.googleapis.com/v1/courses\", headers=headers)\r\n",
 					"    coursesJson = json.dumps(json.loads(r.text)[\"courses\"]);\r\n",
 					"    coursesDf = spark.read.json(sc.parallelize([coursesJson]))\r\n",
 					"    coursesDf.write.format('json').mode('overwrite').save(stage1 + '/googleclassroom/courses')"
 				],
-				"execution_count": 178
+				"execution_count": 468
 			},
 			{
 				"cell_type": "code",
@@ -244,14 +246,13 @@
 					"def processStage2Courses():\r\n",
 					"    sourceData = stage1 + f'/googleclassroom/courses'\r\n",
 					"    try:\r\n",
-					"        dfCourses = spark.read.json(sourceData)\r\n",
-					"        dfCourses.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/googleclassroom/courses')\r\n",
+					"        df = spark.read.json(sourceData)\r\n",
+					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/googleclassroom/courses')\r\n",
 					"        \r\n",
 					"    except AnalysisException as e:\r\n",
-					"        print (e)\r\n",
-					"        print(f\"Source data not found: {sourceData}\")"
+					"        print (e)"
 				],
-				"execution_count": 179
+				"execution_count": 469
 			},
 			{
 				"cell_type": "code",
@@ -275,13 +276,12 @@
 					"def processStage3Courses():\r\n",
 					"    sourceData = stage2 + f'/googleclassroom/courses'\r\n",
 					"    try:\r\n",
-					"        dfCourses = spark.read.parquet(sourceData)\r\n",
-					"        dfCourses.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/courses')\r\n",
+					"        df = spark.read.parquet(sourceData)\r\n",
+					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/courses')\r\n",
 					"    except AnalysisException as e:\r\n",
-					"        print (e)\r\n",
-					"        print(f\"Source data not found: {sourceData}\")"
+					"        print (e)"
 				],
-				"execution_count": 180
+				"execution_count": 470
 			},
 			{
 				"cell_type": "code",
@@ -309,13 +309,15 @@
 					"        dfCourseStudents = df.select(\"courseId\", \"userId\")\r\n",
 					"        dfCourseStudents.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/googleclassroom/coursestudents')\r\n",
 					"\r\n",
-					"        dfUsers = df.select(\"profile.*\")\r\n",
+					"        dfUsers = df.select(\"userId\", \"profile.name.*\").distinct()\r\n",
 					"        dfUsers.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/googleclassroom/users')\r\n",
+					"\r\n",
+					"        dfUserPermissions = df.select(\"userId\", \"profile.permissions.permission\").distinct()\r\n",
+					"        dfUserPermissions.write.format(\"parquet\").mode(\"append\").save(stage2 + f'/googleclassroom/userpermissions')\r\n",
 					"    except AnalysisException as e:\r\n",
-					"        print (e)\r\n",
-					"        print(f\"Source data not found: {sourceData}\")"
+					"        print (e)"
 				],
-				"execution_count": 181
+				"execution_count": 487
 			},
 			{
 				"cell_type": "code",
@@ -342,10 +344,9 @@
 					"        df = spark.read.parquet(sourceData)\r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/coursestudents')\r\n",
 					"    except AnalysisException as e:\r\n",
-					"        print (e)\r\n",
-					"        print(f\"Source data not found: {sourceData}\")"
+					"        print (e)"
 				],
-				"execution_count": 182
+				"execution_count": 472
 			},
 			{
 				"cell_type": "code",
@@ -373,14 +374,16 @@
 					"        dfCourseTeachers = df.select(\"courseId\", \"userId\")\r\n",
 					"        dfCourseTeachers.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/googleclassroom/courseteachers')\r\n",
 					"        \r\n",
-					"        dfUsers = df.select(\"profile.*\")\r\n",
+					"        dfUsers = df.select(\"userId\", \"profile.name.*\")\r\n",
 					"        dfUsers.write.format(\"parquet\").mode(\"append\").save(stage2 + f'/googleclassroom/users')\r\n",
 					"        \r\n",
+					"        dfUserPermissions = df.select(\"userId\", \"profile.permissions.permission\")\r\n",
+					"        dfUserPermissions.write.format(\"parquet\").mode(\"append\").save(stage2 + f'/googleclassroom/userpermissions')\r\n",
+					"\r\n",
 					"    except AnalysisException as e:\r\n",
-					"        print (e)\r\n",
-					"        print(f\"Source data not found: {sourceData}\")"
+					"        print (e)"
 				],
-				"execution_count": 183
+				"execution_count": 473
 			},
 			{
 				"cell_type": "code",
@@ -407,10 +410,9 @@
 					"        df = spark.read.parquet(sourceData)\r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/courseteachers')\r\n",
 					"    except AnalysisException as e:\r\n",
-					"        print (e)\r\n",
-					"        print(f\"Source data not found: {sourceData}\")"
+					"        print (e)"
 				],
-				"execution_count": 184
+				"execution_count": 474
 			},
 			{
 				"cell_type": "code",
@@ -438,10 +440,38 @@
 					"        df = spark.read.parquet(sourceData)\r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/users')\r\n",
 					"    except AnalysisException as e:\r\n",
-					"        print (e)\r\n",
-					"        print(f\"Source data not found: {sourceData}\")"
+					"        print (e)"
 				],
-				"execution_count": null
+				"execution_count": 475
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"# Process Stage 3 User Permissions\r\n",
+					"# Convert from Parquet to Parquet\r\n",
+					"# Save in stage 3 container\r\n",
+					"\r\n",
+					"def processStage3UserPermissions():\r\n",
+					"    sourceData = stage2 + f'/googleclassroom/userpermissions'\r\n",
+					"    try:\r\n",
+					"        df = spark.read.parquet(sourceData)\r\n",
+					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/userpermissions')\r\n",
+					"    except AnalysisException as e:\r\n",
+					"        print (e)"
+				],
+				"execution_count": 476
 			},
 			{
 				"cell_type": "code",
@@ -462,7 +492,7 @@
 					"    processStage1Courses()\r\n",
 					"    ingestStage1Data()"
 				],
-				"execution_count": 185
+				"execution_count": 477
 			},
 			{
 				"cell_type": "code",
@@ -484,7 +514,7 @@
 					"    processStage2CourseTeachers()\r\n",
 					"    processStage2CourseStudents()"
 				],
-				"execution_count": 186
+				"execution_count": 478
 			},
 			{
 				"cell_type": "code",
@@ -505,9 +535,10 @@
 					"    processStage3Courses()\r\n",
 					"    processStage3CourseTeachers()\r\n",
 					"    processStage3CourseStudents()\r\n",
-					"    processStage3Users()"
+					"    processStage3Users()\r\n",
+					"    processStage3UserPermissions()"
 				],
-				"execution_count": 187
+				"execution_count": 479
 			},
 			{
 				"cell_type": "code",
@@ -529,7 +560,7 @@
 					"    ingestResource(courseId, \"students\")\r\n",
 					"    ingestResource(courseId, \"teachers\")"
 				],
-				"execution_count": 188
+				"execution_count": 480
 			},
 			{
 				"cell_type": "code",
@@ -553,20 +584,28 @@
 					"    spark.sql('CREATE DATABASE IF NOT EXISTS ' + db_name)\r\n",
 					"    try:\r\n",
 					"        google_entity = \"courses\"\r\n",
+					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
 					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
 					"        \r\n",
 					"        google_entity = \"courseteachers\"\r\n",
+					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
 					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
 					"\r\n",
 					"        google_entity = \"coursestudents\"\r\n",
+					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
 					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
 					"\r\n",
 					"        google_entity = \"users\"\r\n",
+					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
+					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
+					"\r\n",
+					"        google_entity = \"userpermissions\"\r\n",
+					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
 					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
 					"    except AnalysisException:\r\n",
 					"        print(f\"Table {google_entity} could not be created in {db_name}\")"
 				],
-				"execution_count": 195
+				"execution_count": 481
 			},
 			{
 				"cell_type": "code",
@@ -594,7 +633,7 @@
 					"    mssparkutils.fs.rm(sourceData, True)\r\n",
 					"    mssparkutils.fs.mkdirs(sourceData)"
 				],
-				"execution_count": 190
+				"execution_count": 482
 			},
 			{
 				"cell_type": "code",
@@ -618,7 +657,7 @@
 					"    mssparkutils.fs.rm(sourceData, True)\r\n",
 					"    mssparkutils.fs.mkdirs(sourceData)    "
 				],
-				"execution_count": 191
+				"execution_count": 483
 			},
 			{
 				"cell_type": "code",
@@ -642,7 +681,7 @@
 					"    mssparkutils.fs.rm(sourceData, True)\r\n",
 					"    mssparkutils.fs.mkdirs(sourceData)   "
 				],
-				"execution_count": 192
+				"execution_count": 484
 			},
 			{
 				"cell_type": "code",
@@ -664,7 +703,7 @@
 					"    for i in coursesDf.rdd.toLocalIterator():\r\n",
 					"        processCourseRow(i)"
 				],
-				"execution_count": 193
+				"execution_count": 485
 			},
 			{
 				"cell_type": "code",
@@ -686,12 +725,13 @@
 					"clearStage3Data()\r\n",
 					"processStage1Data()\r\n",
 					"processStage2Data()\r\n",
+					"processStage3Data()\r\n",
 					"\r\n",
 					"db_prefix = 'test_' if use_test_env else ''\r\n",
 					"create_spark_db(db_prefix + 's2_googleclassroom', stage2 + '/googleclassroom')\r\n",
 					"create_spark_db(db_prefix + 's3_googleclassroom', stage3 + '/googleclassroom')"
 				],
-				"execution_count": 196
+				"execution_count": 488
 			}
 		]
 	}
