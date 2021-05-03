@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 1",
+	"properties": {
+		"content": {
+			"query": "SELECT TOP (100) *\n FROM [s2_googleclassroom].[dbo].[courses] c\n LEFT JOIN [s2_googleclassroom].[dbo].[courseteachers] ct on ct.courseId = c.Id\n LEFT JOIN [s2_googleclassroom].[dbo].[users] ut on ut.Id = ct.userId\n LEFT JOIN [s2_googleclassroom].[dbo].[coursestudents] cs on cs.courseId = c.Id\n LEFT JOIN [s2_googleclassroom].[dbo].[users] us on us.Id = ct.userId",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"poolName": "Built-in",
+				"databaseName": "s2_googleclassroom"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
