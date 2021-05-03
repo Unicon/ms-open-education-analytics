@@ -183,17 +183,13 @@
 					"collapsed": true
 				},
 				"source": [
-					"# Load Google Classroom courses data into data frame and save to stage 1\r\n",
-					"googleClassroomBaseUrl = \"https://classroom.googleapis.com/v1/\"\r\n",
-					"googleClassroomRelativeUrl = \"courses\"\r\n",
-					"headers = getRequestHeaders()\r\n",
-					"\r\n",
-					"r = requests.get(f\"{googleClassroomBaseUrl}{googleClassroomRelativeUrl}\", headers=headers)\r\n",
-					"coursesJson = json.dumps(json.loads(r.text)[\"courses\"]);\r\n",
-					"coursesDf = spark.read.json(sc.parallelize([coursesJson]))\r\n",
-					"coursesDf.write.format('json').mode('overwrite').save(stage1 + '/googleclassroom/courses')"
+					"def ingestResource(courseId, resource):\r\n",
+					"    r = requests.get(f\"{googleClassroomBaseUrl}{googleClassroomRelativeUrl}/{courseId}/{resource}\", headers=headers)\r\n",
+					"    resourcesJson = json.dumps(json.loads(r.text)[resource]);\r\n",
+					"    resourceDf = spark.read.json(sc.parallelize([resourcesJson]))\r\n",
+					"    resourceDf.write.format('json').mode('append').save(stage1 + f'/googleclassroom/{resource}')"
 				],
-				"execution_count": 126
+				"execution_count": 127
 			},
 			{
 				"cell_type": "code",
@@ -210,13 +206,21 @@
 					"collapsed": true
 				},
 				"source": [
-					"def ingestResource(courseId, resource):\r\n",
-					"    r = requests.get(f\"{googleClassroomBaseUrl}{googleClassroomRelativeUrl}/{courseId}/{resource}\", headers=headers)\r\n",
-					"    resourcesJson = json.dumps(json.loads(r.text)[resource]);\r\n",
-					"    resourceDf = spark.read.json(sc.parallelize([resourcesJson]))\r\n",
-					"    resourceDf.write.format('json').mode('append').save(stage1 + f'/googleclassroom/{resource}')"
+					"# Process Stage 1 Courses\r\n",
+					"# Request JSON from Google Classroom API\r\n",
+					"# Save in stage 1 container\r\n",
+					"def processStage1Courses():\r\n",
+					"    # Load Google Classroom courses data into data frame and save to stage 1\r\n",
+					"    googleClassroomBaseUrl = \"https://classroom.googleapis.com/v1/\"\r\n",
+					"    googleClassroomRelativeUrl = \"courses\"\r\n",
+					"    headers = getRequestHeaders()\r\n",
+					"\r\n",
+					"    r = requests.get(f\"{googleClassroomBaseUrl}{googleClassroomRelativeUrl}\", headers=headers)\r\n",
+					"    coursesJson = json.dumps(json.loads(r.text)[\"courses\"]);\r\n",
+					"    coursesDf = spark.read.json(sc.parallelize([coursesJson]))\r\n",
+					"    coursesDf.write.format('json').mode('overwrite').save(stage1 + '/googleclassroom/courses')"
 				],
-				"execution_count": 127
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -264,19 +268,46 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Process Stage 3 Courses\r\n",
+					"# Convert from Parquet to Parquet\r\n",
+					"# Save in stage 3 container\r\n",
+					"\r\n",
+					"def processStage3Courses():\r\n",
+					"    sourceData = stage2 + f'/googleclassroom/courses'\r\n",
+					"    try:\r\n",
+					"        dfCourses = spark.read.parquet(sourceData)\r\n",
+					"        dfCourses.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/courses')\r\n",
+					"    except AnalysisException as e:\r\n",
+					"        print (e)\r\n",
+					"        print(f\"Source data not found: {sourceData}\")"
+				],
+				"execution_count": 170
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
 					"# Process Stage 2 Course Students\r\n",
 					"# Convert from JSON to Parquet\r\n",
 					"# Save in stage 2 container\r\n",
 					"\r\n",
 					"def processStage2CourseStudents():\r\n",
-					"    sourceData = stage1 + f'/googleclassroom/students'\r\n",
+					"    sourceData = stage1 + f'/googleclassroom/coursestudents'\r\n",
 					"    try:\r\n",
 					"        df = spark.read.json(sourceData)\r\n",
 					"        dfCourseStudents = df.select(\"courseId\", \"userId\")\r\n",
 					"        dfCourseStudents.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/googleclassroom/coursestudents')\r\n",
-					"        dfUsers = df.select(\"profile.*\")\r\n",
-					"        dfUsers.write.format(\"parquet\").mode(\"append\").save(stage2 + f'/googleclassroom/users')\r\n",
-					"        \r\n",
 					"    except AnalysisException as e:\r\n",
 					"        print (e)\r\n",
 					"        print(f\"Source data not found: {sourceData}\")"
@@ -298,8 +329,39 @@
 					"collapsed": true
 				},
 				"source": [
+					"# Process Stage 3 Course Students\r\n",
+					"# Convert from Parquest to Parquet\r\n",
+					"# Save in stage 3 container\r\n",
+					"\r\n",
+					"def processStage3CourseStudents():\r\n",
+					"    sourceData = stage2 + f'/googleclassroom/coursestudents'\r\n",
+					"    try:\r\n",
+					"        df = spark.read.parquet(sourceData)\r\n",
+					"        dfCourseStudents = df.select(\"courseId\", \"userId\")\r\n",
+					"        dfCourseStudents.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/coursestudents')\r\n",
+					"    except AnalysisException as e:\r\n",
+					"        print (e)\r\n",
+					"        print(f\"Source data not found: {sourceData}\")"
+				],
+				"execution_count": null
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
 					"# Process Stage 2 Course Teachers\r\n",
-					"# Convert from JSON to Parquet\r\n",
+					"# Convert from Parquet to Parquet\r\n",
 					"# Save in stage 2 container\r\n",
 					"\r\n",
 					"def processStage2CourseTeachers():\r\n",
@@ -316,6 +378,58 @@
 					"        print(f\"Source data not found: {sourceData}\")"
 				],
 				"execution_count": 155
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"# Process Stage 3 Course Teachers\r\n",
+					"# Convert from Parquet to Parquet\r\n",
+					"# Save in stage 3 container\r\n",
+					"\r\n",
+					"def processStage3CourseTeachers():\r\n",
+					"    sourceData = stage2 + f'/googleclassroom/courseteachers'\r\n",
+					"    try:\r\n",
+					"        df = spark.read.json(sourceData)\r\n",
+					"        dfCourseStudents = df.select(\"courseId\", \"userId\")\r\n",
+					"        dfCourseStudents.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/courseteachers')\r\n",
+					"    except AnalysisException as e:\r\n",
+					"        print (e)\r\n",
+					"        print(f\"Source data not found: {sourceData}\")"
+				],
+				"execution_count": 171
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
+					"def processStage1Data():\r\n",
+					"    processStage1Courses()\r\n",
+					"    ingestStage1Data()"
+				],
+				"execution_count": null
 			},
 			{
 				"cell_type": "code",
@@ -355,10 +469,11 @@
 				},
 				"source": [
 					"def processStage3Data():\r\n",
+					"    processStage3Courses()\r\n",
 					"    processStage3CourseTeachers()\r\n",
 					"    processStage3CourseStudents()"
 				],
-				"execution_count": 152
+				"execution_count": 169
 			},
 			{
 				"cell_type": "code",
@@ -479,6 +594,30 @@
 					"collapsed": true
 				},
 				"source": [
+					"#Clear out previous data\r\n",
+					"def clearStage3Data():\r\n",
+					"    sourceData = stage3 + f'/googleclassroom/users'\r\n",
+					"    mssparkutils.fs.mkdirs(sourceData)\r\n",
+					"    mssparkutils.fs.rm(sourceData, True)\r\n",
+					"    mssparkutils.fs.mkdirs(sourceData)   "
+				],
+				"execution_count": 167
+			},
+			{
+				"cell_type": "code",
+				"metadata": {
+					"jupyter": {
+						"source_hidden": false,
+						"outputs_hidden": false
+					},
+					"nteract": {
+						"transient": {
+							"deleting": false
+						}
+					},
+					"collapsed": true
+				},
+				"source": [
 					"def ingestStage1Data():\r\n",
 					"# Iterate through Courses to fetch course related data\r\n",
 					"    for i in coursesDf.rdd.toLocalIterator():\r\n",
@@ -503,7 +642,8 @@
 				"source": [
 					"clearStage1Data()\r\n",
 					"clearStage2Data()\r\n",
-					"ingestStage1Data()\r\n",
+					"clearStage3Data()\r\n",
+					"processStage1Data()\r\n",
 					"processStage2Data()\r\n",
 					"\r\n",
 					"db_prefix = 'test_' if use_test_env else ''\r\n",
