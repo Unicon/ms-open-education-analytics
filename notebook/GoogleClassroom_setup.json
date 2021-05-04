@@ -730,9 +730,9 @@
 					"collapsed": true
 				},
 				"source": [
-					"#clearStage1Data()\r\n",
-					"#clearStage2Data()\r\n",
-					"#clearStage3Data()\r\n",
+					"clearStage1Data()\r\n",
+					"clearStage2Data()\r\n",
+					"clearStage3Data()\r\n",
 					"processStage1Data()\r\n",
 					"processStage2Data()\r\n",
 					"processStage3Data()\r\n",
