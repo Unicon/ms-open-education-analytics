@@ -60,7 +60,7 @@
 					"from pyspark.sql.functions import from_json, col, explode, lit\r\n",
 					"from notebookutils import mssparkutils"
 				],
-				"execution_count": 419
+				"execution_count": 479
 			},
 			{
 				"cell_type": "code",
@@ -85,7 +85,7 @@
 					"use_test_env = False\r\n",
 					"oAuth2TokenBaseUrl = f\"https://olagoogleoauth2.azurewebsites.net/api/GetOAuth2Token\""
 				],
-				"execution_count": 420
+				"execution_count": 480
 			},
 			{
 				"cell_type": "code",
@@ -112,7 +112,7 @@
 					"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\r\n",
 					"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
 				],
-				"execution_count": 421
+				"execution_count": 481
 			},
 			{
 				"cell_type": "code",
@@ -138,9 +138,9 @@
 					"r = requests.get(oAuth2TokenUrl)\r\n",
 					"tokenJson = json.loads(r.text);\r\n",
 					"bearerToken = f\"Bearer {tokenJson['token']}\"\r\n",
-					"bearerToken = \"Bearer ya29.a0AfH6SMA-Hd153JQo9P6HrBwYhuwoTnN9vA9gqOaF_eZ21Ln6tqTWJ-2c3wlhYQP6frKerfOnSBgfg6zghtoK5vouXdLurbERIftC1jWKYUxVg-U6ZEYYYtH_MIi3R_-FwmjxtXPcwzXMxiUPh7YiyRQd0Wv-TA\" "
+					"bearerToken = \"Bearer ya29.a0AfH6SMDjY9_cIAXOyheQvUDAwgDk0zoAXQ-pfbCmXinpTQnOQTivb1uNjmcbW4RgYTgKo_w3gC_WCzBXKtrkON7PgQi1LJRuhbWFYm2guJiIt7jn6GywUBEokbNhfe9SqoQ0iVCksxVt-SjxycnKMzCXJDAM\" "
 				],
-				"execution_count": 422
+				"execution_count": 482
 			},
 			{
 				"cell_type": "code",
@@ -165,7 +165,7 @@
 					"        \"User-Agent\": \"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/90.0.4430.93 Safari/537.36\"\r\n",
 					"        }    "
 				],
-				"execution_count": 423
+				"execution_count": 483
 			},
 			{
 				"cell_type": "code",
@@ -194,7 +194,7 @@
 					"    coursesDf.write.format('json').mode('overwrite').save(stage1 + '/googleclassroom/courses')\r\n",
 					"    return coursesDf"
 				],
-				"execution_count": 424
+				"execution_count": 484
 			},
 			{
 				"cell_type": "code",
@@ -224,7 +224,7 @@
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 425
+				"execution_count": 485
 			},
 			{
 				"cell_type": "code",
@@ -253,7 +253,7 @@
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 426
+				"execution_count": 486
 			},
 			{
 				"cell_type": "code",
@@ -270,19 +270,19 @@
 					"collapsed": true
 				},
 				"source": [
-					"# Process Stage 2 Course Aliases\r\n",
+					"# Process Stage 2 Course Resources without transform\r\n",
 					"# Convert from JSON to Parquet\r\n",
 					"# Save in stage 2 container\r\n",
-					"\r\n",
-					"def processStage2CourseAliases():\r\n",
-					"    sourceData = stage1 + f'/googleclassroom/aliases'\r\n",
-					"    try:\r\n",
-					"        df = spark.read.json(sourceData)\r\n",
-					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/googleclassroom/coursealiases')\r\n",
-					"    except AnalysisException as e:\r\n",
-					"        print (e)"
+					"def processStage2CourseResourceNoTransform(resources):\r\n",
+					"    for resource in resources:\r\n",
+					"        sourceData = stage1 + f'/googleclassroom/{resource}'\r\n",
+					"        try:\r\n",
+					"            df = spark.read.json(sourceData)\r\n",
+					"            df.write.format(\"parquet\").mode(\"overwrite\").save(stage2 + f'/googleclassroom/course{resource}')\r\n",
+					"        except AnalysisException as e:\r\n",
+					"            print (e)"
 				],
-				"execution_count": 427
+				"execution_count": 487
 			},
 			{
 				"cell_type": "code",
@@ -299,19 +299,19 @@
 					"collapsed": true
 				},
 				"source": [
-					"# Process Stage 3 Course Aliases\r\n",
+					"# Process Stage 3 Course Resources without transform\r\n",
 					"# Convert from Parquet to Parquet\r\n",
 					"# Save in stage 3 container\r\n",
-					"\r\n",
-					"def processStage3CourseAliases():\r\n",
-					"    sourceData = stage2 + f'/googleclassroom/coursealiases'\r\n",
-					"    try:\r\n",
-					"        df = spark.read.parquet(sourceData)\r\n",
-					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/coursealiases')\r\n",
-					"    except AnalysisException as e:\r\n",
-					"        print (e)"
+					"def processStage3CourseResourceNoTransform(resources):\r\n",
+					"    for resource in resources:\r\n",
+					"        sourceData = stage2 + f'/googleclassroom/course{resource}'\r\n",
+					"        try:\r\n",
+					"            df = spark.read.parquet(sourceData)\r\n",
+					"            df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/course{resource}')\r\n",
+					"        except AnalysisException as e:\r\n",
+					"            print (e)"
 				],
-				"execution_count": 428
+				"execution_count": 488
 			},
 			{
 				"cell_type": "code",
@@ -347,7 +347,7 @@
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 429
+				"execution_count": 489
 			},
 			{
 				"cell_type": "code",
@@ -376,7 +376,7 @@
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 430
+				"execution_count": 490
 			},
 			{
 				"cell_type": "code",
@@ -413,7 +413,7 @@
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 431
+				"execution_count": 491
 			},
 			{
 				"cell_type": "code",
@@ -442,7 +442,7 @@
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 432
+				"execution_count": 492
 			},
 			{
 				"cell_type": "code",
@@ -473,7 +473,7 @@
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 447
+				"execution_count": 493
 			},
 			{
 				"cell_type": "code",
@@ -502,7 +502,7 @@
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 434
+				"execution_count": 494
 			},
 			{
 				"cell_type": "code",
@@ -521,11 +521,11 @@
 				"source": [
 					"def processStage2Data():\r\n",
 					"    processStage2Courses()\r\n",
-					"    processStage2CourseAliases()\r\n",
+					"    processStage2CourseResourceNoTransform([\"aliases\", \"announcements\"])\r\n",
 					"    processStage2CourseTeachers()\r\n",
 					"    processStage2CourseStudents()"
 				],
-				"execution_count": 435
+				"execution_count": 495
 			},
 			{
 				"cell_type": "code",
@@ -544,13 +544,13 @@
 				"source": [
 					"def processStage3Data():\r\n",
 					"    processStage3Courses()\r\n",
-					"    processStage3CourseAliases()\r\n",
+					"    processStage3CourseResourceNoTransform([\"aliases\", \"announcements\"])\r\n",
 					"    processStage3CourseTeachers()\r\n",
 					"    processStage3CourseStudents()\r\n",
 					"    processStage3Users()\r\n",
 					"    processStage3UserPermissions()"
 				],
-				"execution_count": 436
+				"execution_count": 496
 			},
 			{
 				"cell_type": "code",
@@ -585,7 +585,7 @@
 					"\r\n",
 					"    resourceDf.write.format('json').mode('append').save(stage1 + f'/googleclassroom/{resource}')"
 				],
-				"execution_count": 437
+				"execution_count": 497
 			},
 			{
 				"cell_type": "code",
@@ -605,10 +605,11 @@
 					"def processCourseRow(row):\r\n",
 					"    courseId = row[\"id\"]\r\n",
 					"    ingestResource(courseId, \"aliases\")\r\n",
+					"    ingestResource(courseId, \"announcements\")\r\n",
 					"    ingestResource(courseId, \"students\")\r\n",
 					"    ingestResource(courseId, \"teachers\")"
 				],
-				"execution_count": 438
+				"execution_count": 498
 			},
 			{
 				"cell_type": "code",
@@ -630,7 +631,7 @@
 					"    for i in coursesDf.rdd.toLocalIterator():\r\n",
 					"        processCourseRow(i)"
 				],
-				"execution_count": 439
+				"execution_count": 499
 			},
 			{
 				"cell_type": "code",
@@ -650,7 +651,7 @@
 					"def processStage1Data():\r\n",
 					"    ingestStage1Data(processStage1Courses())"
 				],
-				"execution_count": 440
+				"execution_count": 500
 			},
 			{
 				"cell_type": "code",
@@ -671,35 +672,17 @@
 					"# This is only creating metadata for SQL on-demand, pointing to the data in the delta-lake.\r\n",
 					"# This also makes it possible to connect in Power BI via the azure sql data source connector.\r\n",
 					"def create_spark_db(db_name, source_path):\r\n",
+					"    google_entities = [\"courses\", \"coursealiases\", \"courseannouncements\", \"coursestudents\", \"courseteachers\", \"users\", \"userpermissions\"]\r\n",
 					"    spark.sql('CREATE DATABASE IF NOT EXISTS ' + db_name)\r\n",
-					"    try:\r\n",
-					"        google_entity = \"courses\"\r\n",
-					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
-					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
-					"        \r\n",
-					"        google_entity = \"coursealiases\"\r\n",
-					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
-					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
 					"\r\n",
-					"        google_entity = \"courseteachers\"\r\n",
-					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
-					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
-					"\r\n",
-					"        google_entity = \"coursestudents\"\r\n",
-					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
-					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
-					"\r\n",
-					"        google_entity = \"users\"\r\n",
-					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
-					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
-					"\r\n",
-					"        google_entity = \"userpermissions\"\r\n",
-					"        spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
-					"        spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
-					"    except AnalysisException:\r\n",
-					"        print(f\"Table {google_entity} could not be created in {db_name}\")"
+					"    for google_entity in google_entities:\r\n",
+					"        try:\r\n",
+					"            spark.sql(\"drop table if exists \" + db_name + f\".{google_entity}\")  \r\n",
+					"            spark.sql(\"create table if not exists \" + db_name + f\".{google_entity} using PARQUET location '\" + source_path + f\"/{google_entity}'\")  \r\n",
+					"        except AnalysisException:\r\n",
+					"            print(f\"Table {google_entity} could not be created in {db_name}\")"
 				],
-				"execution_count": 441
+				"execution_count": 501
 			},
 			{
 				"cell_type": "code",
@@ -721,7 +704,7 @@
 					"    mssparkutils.fs.rm(sourceData, True)\r\n",
 					"    mssparkutils.fs.mkdirs(sourceData)"
 				],
-				"execution_count": 442
+				"execution_count": 502
 			},
 			{
 				"cell_type": "code",
@@ -742,9 +725,10 @@
 					"def clearStage1Data():\r\n",
 					"    clearSourceData(stage1 + f'/googleclassroom/students')\r\n",
 					"    clearSourceData(stage1 + f'/googleclassroom/teachers')\r\n",
-					"    clearSourceData(stage1 + f'/googleclassroom/aliases')"
+					"    clearSourceData(stage1 + f'/googleclassroom/aliases')\r\n",
+					"    clearSourceData(stage1 + f'/googleclassroom/announcements')"
 				],
-				"execution_count": 443
+				"execution_count": 503
 			},
 			{
 				"cell_type": "code",
@@ -766,7 +750,7 @@
 					"    clearSourceData(stage2 + f'/googleclassroom/users')\r\n",
 					"    clearSourceData(stage2 + f'/googleclassroom/userpermissions')"
 				],
-				"execution_count": 444
+				"execution_count": 504
 			},
 			{
 				"cell_type": "code",
@@ -788,7 +772,7 @@
 					"    clearSourceData(stage3 + f'/googleclassroom/users')\r\n",
 					"    clearSourceData(stage3 + f'/googleclassroom/userpermissions')"
 				],
-				"execution_count": 445
+				"execution_count": 505
 			},
 			{
 				"cell_type": "code",
@@ -805,18 +789,18 @@
 					"collapsed": true
 				},
 				"source": [
-					"#clearStage1Data()\r\n",
-					"#clearStage2Data()\r\n",
-					"#clearStage3Data()\r\n",
-					"#processStage1Data()\r\n",
-					"#processStage2Data()\r\n",
+					"clearStage1Data()\r\n",
+					"clearStage2Data()\r\n",
+					"clearStage3Data()\r\n",
+					"processStage1Data()\r\n",
+					"processStage2Data()\r\n",
 					"processStage3Data()\r\n",
 					"\r\n",
 					"db_prefix = 'test_' if use_test_env else ''\r\n",
 					"create_spark_db(db_prefix + 's2_googleclassroom', stage2 + '/googleclassroom')\r\n",
 					"create_spark_db(db_prefix + 's3_googleclassroom', stage3 + '/googleclassroom')"
 				],
-				"execution_count": 448
+				"execution_count": 506
 			}
 		]
 	}

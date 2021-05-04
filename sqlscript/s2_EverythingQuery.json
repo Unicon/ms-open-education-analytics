@@ -2,7 +2,7 @@
 	"name": "s2_EverythingQuery",
 	"properties": {
 		"content": {
-			"query": "SELECT TOP (100) *\n FROM [s2_googleclassroom].[dbo].[courses] c\n LEFT JOIN [s2_googleclassroom].[dbo].[coursealiases] ca on ca.courseId = c.id\n LEFT JOIN [s2_googleclassroom].[dbo].[courseteachers] ct on ct.courseId = c.id\n LEFT JOIN [s2_googleclassroom].[dbo].[users] ut on ut.userId = ct.userId\n LEFT JOIN [s2_googleclassroom].[dbo].[coursestudents] cs on cs.courseId = c.id\n LEFT JOIN [s2_googleclassroom].[dbo].[users] us on us.userId = cs.userId",
+			"query": "SELECT TOP (100) *\n FROM [s2_googleclassroom].[dbo].[courses] c\n LEFT JOIN [s2_googleclassroom].[dbo].[coursealiases] ca on ca.courseId = c.id\n LEFT JOIN [s2_googleclassroom].[dbo].[courseannouncements] can on can.courseId = c.id\n LEFT JOIN [s2_googleclassroom].[dbo].[courseteachers] ct on ct.courseId = c.id\n LEFT JOIN [s2_googleclassroom].[dbo].[users] ut on ut.userId = ct.userId\n LEFT JOIN [s2_googleclassroom].[dbo].[coursestudents] cs on cs.courseId = c.id\n LEFT JOIN [s2_googleclassroom].[dbo].[users] us on us.userId = cs.userId",
 			"metadata": {
 				"language": "sql"
 			},
