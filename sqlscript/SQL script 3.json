@@ -1,0 +1,17 @@
+{
+	"name": "SQL script 3",
+	"properties": {
+		"content": {
+			"query": "SELECT *\n FROM [s2_googleclassroom].[dbo].[userpermissions]",
+			"metadata": {
+				"language": "sql"
+			},
+			"currentConnection": {
+				"poolName": "Built-in",
+				"databaseName": "s2_googleclassroom"
+			},
+			"resultLimit": 5000
+		},
+		"type": "SqlQuery"
+	}
+}
