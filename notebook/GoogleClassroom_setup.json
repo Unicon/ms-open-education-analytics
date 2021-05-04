@@ -468,11 +468,12 @@
 					"    sourceData = stage2 + f'/googleclassroom/users'\r\n",
 					"    try:\r\n",
 					"        df = spark.read.parquet(sourceData)\r\n",
+					"        df = df.withColumn(\"familyName\", lit('*')).withColumn(\"fullName\", lit('*')).withColumn(\"givenName\", lit('*'))\r\n",
 					"        df.write.format(\"parquet\").mode(\"overwrite\").save(stage3 + f'/googleclassroom/users')\r\n",
 					"    except AnalysisException as e:\r\n",
 					"        print (e)"
 				],
-				"execution_count": 433
+				"execution_count": 447
 			},
 			{
 				"cell_type": "code",
@@ -804,18 +805,18 @@
 					"collapsed": true
 				},
 				"source": [
-					"clearStage1Data()\r\n",
-					"clearStage2Data()\r\n",
-					"clearStage3Data()\r\n",
-					"processStage1Data()\r\n",
-					"processStage2Data()\r\n",
+					"#clearStage1Data()\r\n",
+					"#clearStage2Data()\r\n",
+					"#clearStage3Data()\r\n",
+					"#processStage1Data()\r\n",
+					"#processStage2Data()\r\n",
 					"processStage3Data()\r\n",
 					"\r\n",
 					"db_prefix = 'test_' if use_test_env else ''\r\n",
 					"create_spark_db(db_prefix + 's2_googleclassroom', stage2 + '/googleclassroom')\r\n",
 					"create_spark_db(db_prefix + 's3_googleclassroom', stage3 + '/googleclassroom')"
 				],
-				"execution_count": 446
+				"execution_count": 448
 			}
 		]
 	}
