@@ -44,8 +44,9 @@
 				"nodeCount": 3,
 				"cores": 4,
 				"memory": 28,
-				"extraHeader": null
-			}
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
 		},
 		"cells": [
 			{
@@ -57,8 +58,7 @@
 					"\n",
 					"\n",
 					""
-				],
-				"attachments": null
+				]
 			},
 			{
 				"cell_type": "code",
@@ -83,8 +83,7 @@
 					"has_staff_section_membership_records = False\n",
 					"has_student_section_membership_records = False"
 				],
-				"attachments": null,
-				"execution_count": 224
+				"execution_count": 17
 			},
 			{
 				"cell_type": "code",
@@ -98,8 +97,7 @@
 					"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\n",
 					"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
 				],
-				"attachments": null,
-				"execution_count": 225
+				"execution_count": 18
 			},
 			{
 				"cell_type": "code",
@@ -187,8 +185,7 @@
 					"  df = spark.sql(\"select _c0 Id, to_timestamp(_c1, 'MM/dd/yyyy hh:mm:ss a') EntryDate, to_timestamp(_c2, 'MM/dd/yyyy hh:mm:ss a') ExitDate, _c3 ExternalId, to_timestamp(_c4, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c6 as boolean) IsActive, _c7 PersonId, _c8 RefGradeLevelWhenCourseTakenId, _c9 RefStudentSectionRoleId, _c10 SectionId from StudentSectionMembership\")\n",
 					"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/StudentSectionMembership')"
 				],
-				"attachments": null,
-				"execution_count": 226
+				"execution_count": 19
 			},
 			{
 				"cell_type": "code",
@@ -222,8 +219,7 @@
 					"  \r\n",
 					"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/OrgSummary')"
 				],
-				"attachments": null,
-				"execution_count": 227
+				"execution_count": 20
 			},
 			{
 				"cell_type": "code",
@@ -279,8 +275,7 @@
 					"\n",
 					""
 				],
-				"attachments": null,
-				"execution_count": 228
+				"execution_count": 21
 			},
 			{
 				"cell_type": "code",
@@ -303,8 +298,7 @@
 					"    spark.read.format('parquet').load(stage2 + '/m365/OrgSummary').write.format('parquet').mode('overwrite').save(stage3 + '/m365/OrgSummary')\r\n",
 					""
 				],
-				"attachments": null,
-				"execution_count": 229
+				"execution_count": 22
 			},
 			{
 				"cell_type": "code",
@@ -369,8 +363,7 @@
 					"    df = df.withColumn('PersonId', sha2(df.PersonId, 256)).withColumn('ExternalId', lit('*'))\n",
 					"    df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/StudentSectionMembership')"
 				],
-				"attachments": null,
-				"execution_count": 230
+				"execution_count": 23
 			},
 			{
 				"cell_type": "code",
@@ -423,8 +416,7 @@
 					"create_spark_db(db_prefix + 's2_m365', stage2 + '/m365')\n",
 					"create_spark_db(db_prefix + 's3_m365', stage3 + '/m365')"
 				],
-				"attachments": null,
-				"execution_count": 231
+				"execution_count": 24
 			}
 		]
 	}
