@@ -1,0 +1,23 @@
+{
+	"name": "vmEdfiSqlServer",
+	"type": "Microsoft.Synapse/workspaces/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"connectionString": "Integrated Security=False;Data Source=vmeffitpdm;Initial Catalog=EdFi_Ods_Populated_Template;User ID=azuresynapse",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "AzureKeyVault",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "vmEdFiSqlServerPassword"
+			}
+		},
+		"connectVia": {
+			"referenceName": "LocalIntegrationRuntime",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}
