@@ -3,7 +3,7 @@
 	"properties": {
 		"activities": [
 			{
-				"name": "LookupTableNames",
+				"name": "LookupEdfiTableNames",
 				"type": "Lookup",
 				"dependsOn": [],
 				"policy": {
@@ -33,7 +33,7 @@
 				"type": "ForEach",
 				"dependsOn": [
 					{
-						"activity": "LookupTableNames",
+						"activity": "LookupEdfiTableNames",
 						"dependencyConditions": [
 							"Completed"
 						]
@@ -42,7 +42,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"items": {
-						"value": "@activity('LookupTableNames').output.value",
+						"value": "@activity('LookupEdfiTableNames').output.value",
 						"type": "Expression"
 					},
 					"activities": [
@@ -106,11 +106,11 @@
 				}
 			},
 			{
-				"name": "Copy_OnPrem_EdFi_SQLServer_Copy_SysTables",
+				"name": "OnPrem_EdFi_SQLServer_Copy_SysTables",
 				"type": "Copy",
 				"dependsOn": [
 					{
-						"activity": "LookupTableNames",
+						"activity": "LookupEdfiTableNames",
 						"dependencyConditions": [
 							"Completed"
 						]
@@ -127,7 +127,7 @@
 				"typeProperties": {
 					"source": {
 						"type": "SqlServerSource",
-						"sqlReaderQuery": "SELECT t.name\nFROM sys.tables t\nJOIN sys.schemas s on s.schema_id = t.schema_id\nWHERE s.name = 'edfi'\nORDER BY t.name",
+						"sqlReaderQuery": "SELECT t.name\nFROM sys.tables t\nJOIN sys.schemas s on s.schema_id = t.schema_id\nWHERE s.name = 'edfi' \nORDER BY t.name",
 						"queryTimeout": "02:00:00",
 						"partitionOption": "None"
 					},
@@ -179,6 +179,181 @@
 						}
 					}
 				]
+			},
+			{
+				"name": "LookupTPDMTableNames",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT t.name\nFROM sys.tables t\nJOIN sys.schemas s on s.schema_id = t.schema_id\nWHERE s.name = 'tpdm'\nORDER BY t.Name",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "OnPremEdFiSqlServerTableLookup",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "OnPrem_TPDM_SQLServer_Copy_SysTables_copy",
+				"type": "Copy",
+				"dependsOn": [
+					{
+						"activity": "LookupTPDMTableNames",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "7.00:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "SqlServerSource",
+						"sqlReaderQuery": "SELECT t.name\nFROM sys.tables t\nJOIN sys.schemas s on s.schema_id = t.schema_id\nWHERE s.name = 'tpdm' \nORDER BY t.name",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"sink": {
+						"type": "ParquetSink",
+						"storeSettings": {
+							"type": "AzureBlobFSWriteSettings"
+						},
+						"formatSettings": {
+							"type": "ParquetWriteSettings"
+						}
+					},
+					"enableStaging": false,
+					"translator": {
+						"type": "TabularTranslator",
+						"mappings": [
+							{
+								"source": {
+									"name": "name",
+									"type": "String",
+									"physicalType": "nvarchar"
+								},
+								"sink": {
+									"name": "name",
+									"type": "String",
+									"physicalType": "UTF8"
+								}
+							}
+						],
+						"typeConversion": true,
+						"typeConversionSettings": {
+							"allowDataTruncation": true,
+							"treatBooleanAsNumber": false
+						}
+					}
+				},
+				"inputs": [
+					{
+						"referenceName": "SqlServerSysTable",
+						"type": "DatasetReference"
+					}
+				],
+				"outputs": [
+					{
+						"referenceName": "EdFiParquet",
+						"type": "DatasetReference",
+						"parameters": {
+							"folder": "sys.tables"
+						}
+					}
+				]
+			},
+			{
+				"name": "ForEachTPDMTableName",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "LookupTPDMTableNames",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('LookupTPDMTableNames').output.value",
+						"type": "Expression"
+					},
+					"activities": [
+						{
+							"name": "OnPrem_TPDM_SQLServer_Copy_Table",
+							"type": "Copy",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "7.00:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"sink": {
+									"type": "ParquetSink",
+									"storeSettings": {
+										"type": "AzureBlobFSWriteSettings"
+									},
+									"formatSettings": {
+										"type": "ParquetWriteSettings"
+									}
+								},
+								"enableStaging": false,
+								"translator": {
+									"type": "TabularTranslator",
+									"typeConversion": true,
+									"typeConversionSettings": {
+										"allowDataTruncation": true,
+										"treatBooleanAsNumber": false
+									}
+								}
+							},
+							"inputs": [
+								{
+									"referenceName": "EdFiSqlServerTable",
+									"type": "DatasetReference"
+								}
+							],
+							"outputs": [
+								{
+									"referenceName": "EdFiParquet",
+									"type": "DatasetReference",
+									"parameters": {
+										"folder": "@item().Name"
+									}
+								}
+							]
+						}
+					]
+				}
 			}
 		],
 		"annotations": [],
