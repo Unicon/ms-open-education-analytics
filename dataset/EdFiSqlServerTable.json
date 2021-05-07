@@ -1,0 +1,16 @@
+{
+	"name": "EdFiSqlServerTable",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "EdFiSqlServer",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [],
+		"typeProperties": {
+			"schema": "tpdm",
+			"table": "@dataset().tableName"
+		}
+	}
+}
