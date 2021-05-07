@@ -35,7 +35,7 @@
 					{
 						"activity": "LookupEdfiTableNames",
 						"dependencyConditions": [
-							"Completed"
+							"Succeeded"
 						]
 					}
 				],
@@ -112,7 +112,7 @@
 					{
 						"activity": "LookupEdfiTableNames",
 						"dependencyConditions": [
-							"Completed"
+							"Succeeded"
 						]
 					}
 				],
@@ -339,7 +339,10 @@
 							"inputs": [
 								{
 									"referenceName": "EdFiSqlServerTable",
-									"type": "DatasetReference"
+									"type": "DatasetReference",
+									"parameters": {
+										"tableName": "@item().Name"
+									}
 								}
 							],
 							"outputs": [
