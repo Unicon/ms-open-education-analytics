@@ -2,7 +2,7 @@
 	"name": "EdFiSqlServer_Course",
 	"properties": {
 		"linkedServiceName": {
-			"referenceName": "EdFiSqlServer",
+			"referenceName": "vmEdfiSqlServer",
 			"type": "LinkedServiceReference"
 		},
 		"parameters": {
