@@ -22,73 +22,11 @@
 		"metadata": {
 			"saveOutput": true,
 			"synapse_widget": {
-				"version": "0.1",
-				"state": {
-					"5c7d060d-cb3c-4ff0-af10-9d4944f17353": {
-						"type": "Synapse.DataFrame",
-						"sync_state": {
-							"table": {
-								"rows": [
-									{
-										"name": "AbsenceEventCategoryDescriptor"
-									},
-									{
-										"name": "AcademicHonorCategoryDescriptor"
-									},
-									{
-										"name": "AcademicSubjectDescriptor"
-									},
-									{
-										"name": "AcademicWeek"
-									},
-									{
-										"name": "AccommodationDescriptor"
-									},
-									{
-										"name": "Account"
-									},
-									{
-										"name": "AccountabilityRating"
-									},
-									{
-										"name": "AccountAccountCode"
-									},
-									{
-										"name": "AccountClassificationDescriptor"
-									},
-									{
-										"name": "AccountCode"
-									}
-								],
-								"schema": {
-									"name": "string"
-								}
-							},
-							"isSummary": false,
-							"language": "scala"
-						},
-						"persist_state": {
-							"view": {
-								"type": "details",
-								"chartOptions": {
-									"chartType": "bar",
-									"aggregationType": "count",
-									"categoryFieldKeys": [
-										"name"
-									],
-									"seriesFieldKeys": [
-										"name"
-									],
-									"isStacked": false
-								}
-							}
-						}
-					}
-				}
+				"version": "0.1"
 			},
 			"kernelspec": {
 				"name": "synapse_pyspark",
-				"display_name": "Synapse PySpark"
+				"display_name": "python"
 			},
 			"language_info": {
 				"name": "python"
@@ -106,8 +44,9 @@
 				"nodeCount": 3,
 				"cores": 4,
 				"memory": 28,
-				"extraHeader": null
-			}
+				"automaticScaleJobs": false
+			},
+			"sessionKeepAliveTimeout": 30
 		},
 		"cells": [
 			{
@@ -146,7 +85,6 @@
 					"df = spark.read.load('abfss://stage1@stoeaesola.dfs.core.windows.net/ed-fi/sys.tables', format='parquet')\r\n",
 					"display(df.limit(10))"
 				],
-				"attachments": null,
 				"execution_count": 35
 			},
 			{
@@ -155,7 +93,6 @@
 					"storage_account = 'stoeaesola'\n",
 					"use_test_env = False"
 				],
-				"attachments": null,
 				"execution_count": 38
 			},
 			{
@@ -170,7 +107,6 @@
 					"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\n",
 					"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
 				],
-				"attachments": null,
 				"execution_count": 39
 			},
 			{
@@ -188,9 +124,9 @@
 					"\n",
 					"df = spark.read.format('parquet').load(stage1 + '/ed-fi/sys.tables')\n",
 					"tables = df.rdd.collect()\n",
-					"create_spark_db('s2_edfi', stage2 + '/ed-fi', tables)"
+					"create_spark_db('s2_edfi', stage2 + '/ed-fi', tables)\n",
+					"create_spark_db('s3_edfi', stage3 + '/ed-fi', tables)"
 				],
-				"attachments": null,
 				"execution_count": 44
 			}
 		]
