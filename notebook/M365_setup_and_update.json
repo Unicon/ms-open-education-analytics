@@ -83,7 +83,7 @@
 					"has_staff_section_membership_records = False\n",
 					"has_student_section_membership_records = False"
 				],
-				"execution_count": 17
+				"execution_count": 25
 			},
 			{
 				"cell_type": "code",
@@ -97,7 +97,7 @@
 					"    stage2 = 'abfss://stage2@' + storage_account + '.dfs.core.windows.net'\n",
 					"    stage3 = 'abfss://stage3@' + storage_account + '.dfs.core.windows.net'"
 				],
-				"execution_count": 18
+				"execution_count": 26
 			},
 			{
 				"cell_type": "code",
@@ -185,7 +185,7 @@
 					"  df = spark.sql(\"select _c0 Id, to_timestamp(_c1, 'MM/dd/yyyy hh:mm:ss a') EntryDate, to_timestamp(_c2, 'MM/dd/yyyy hh:mm:ss a') ExitDate, _c3 ExternalId, to_timestamp(_c4, 'MM/dd/yyyy hh:mm:ss a') CreateDate, to_timestamp(_c5, 'MM/dd/yyyy hh:mm:ss a') LastModifiedDate, cast(_c6 as boolean) IsActive, _c7 PersonId, _c8 RefGradeLevelWhenCourseTakenId, _c9 RefStudentSectionRoleId, _c10 SectionId from StudentSectionMembership\")\n",
 					"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/StudentSectionMembership')"
 				],
-				"execution_count": 19
+				"execution_count": 27
 			},
 			{
 				"cell_type": "code",
@@ -219,7 +219,7 @@
 					"  \r\n",
 					"  df.write.format('parquet').mode('overwrite').save(stage2 + '/m365/OrgSummary')"
 				],
-				"execution_count": 20
+				"execution_count": 28
 			},
 			{
 				"cell_type": "code",
@@ -275,7 +275,7 @@
 					"\n",
 					""
 				],
-				"execution_count": 21
+				"execution_count": 29
 			},
 			{
 				"cell_type": "code",
@@ -298,7 +298,7 @@
 					"    spark.read.format('parquet').load(stage2 + '/m365/OrgSummary').write.format('parquet').mode('overwrite').save(stage3 + '/m365/OrgSummary')\r\n",
 					""
 				],
-				"execution_count": 22
+				"execution_count": 30
 			},
 			{
 				"cell_type": "code",
@@ -363,7 +363,7 @@
 					"    df = df.withColumn('PersonId', sha2(df.PersonId, 256)).withColumn('ExternalId', lit('*'))\n",
 					"    df.write.format('parquet').mode('overwrite').save(stage3 + '/m365/StudentSectionMembership')"
 				],
-				"execution_count": 23
+				"execution_count": 31
 			},
 			{
 				"cell_type": "code",
@@ -416,7 +416,7 @@
 					"create_spark_db(db_prefix + 's2_m365', stage2 + '/m365')\n",
 					"create_spark_db(db_prefix + 's3_m365', stage3 + '/m365')"
 				],
-				"execution_count": 24
+				"execution_count": 32
 			}
 		]
 	}
